@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tebot", "Tebot\Tebot.csproj", "{9E51EAD2-54B4-4B6E-868C-DF31911ED45A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TebotConsole", "TebotConsole\TebotConsole.csproj", "{8419B84C-CAE1-4877-84A6-C907FE12AF3B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9E51EAD2-54B4-4B6E-868C-DF31911ED45A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E51EAD2-54B4-4B6E-868C-DF31911ED45A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E51EAD2-54B4-4B6E-868C-DF31911ED45A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E51EAD2-54B4-4B6E-868C-DF31911ED45A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8419B84C-CAE1-4877-84A6-C907FE12AF3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8419B84C-CAE1-4877-84A6-C907FE12AF3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8419B84C-CAE1-4877-84A6-C907FE12AF3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8419B84C-CAE1-4877-84A6-C907FE12AF3B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
