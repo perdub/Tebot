@@ -4,8 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>Tebot</PackageId>
+    <Version>0.1.1</Version>
+    <Authors>perdub</Authors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
-
+  <ItemGroup>
+      <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Telegram.Bot" Version="19.0.0" />
   </ItemGroup>

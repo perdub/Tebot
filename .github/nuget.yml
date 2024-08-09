@@ -1,0 +1,28 @@
+name: "Nuget"
+on:
+    push:
+      paths-ignore:
+      - '**/*.md'
+
+env:
+  ver: 0.2.${{ github.run_number }}
+
+jobs:          
+    nuget:
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Clone
+          uses: actions/checkout@v4
+
+        - name: Create
+          run: |
+            cd Tebot
+            dotnet pack -c Release /p:Version=$ver
+            cd bin/Release
+            for file in *.nupkg; do
+              new_name="test.nupkg"
+              mv "$file" "$new_name"
+              break
+            done
+            dotnet nuget push test.nupkg -k ${{secrets.NUGET_API}} --source https://api.nuget.org/v3/index.json
