@@ -5,58 +5,52 @@ using Telegram.Bot.Types;
 
 namespace Tebot;
 
-public class Tebot : IDisposable, IUpdateHandler
+public class Tebot: IDisposable, IUpdateHandler
 {
     private ITelegramBotClient _client;
 
     private Dictionary<string, MethodInfo> _implementations;
 
-    private Dictionary<long, string> _userStates;
+    private Dictionary<long, Base> _userStates = new Dictionary<long, Base>();
 
     private string _startState;
+    private Type stateImplementation;
 
-    public Tebot(string token, Type[] statesImplementations, string startState)
+    public Tebot(string token, Type stateImplementation, string startState="/start", HttpClient httpClient = null)
     {
-        _client = new TelegramBotClient(token);
+        if(!stateImplementation.IsClass){
+            throw new ArgumentException("statesImplementations should be a class.");
+        }
+        if(string.IsNullOrEmpty(token)){
+            throw new NullReferenceException("token can`t be a null or empty");
+        }
 
-        _client.StartReceiving(this, new ReceiverOptions{}, CancellationToken.None);
-        
         _implementations = new Dictionary<string, MethodInfo>();
-        _userStates = new Dictionary<long, string>();
+        _client = new TelegramBotClient(token, null);
 
         _startState = startState;
+        this.stateImplementation = stateImplementation;
 
-        ProcessStatesImplementations(statesImplementations);
+        parseMethods(stateImplementation);
+
+        _client.StartReceiving(this);
     }
 
-    private void ProcessStatesImplementations(Type[] implementations){
-        foreach (var item in implementations)
-        {
-            var methods = item.GetMethods();
-            foreach (var method in methods)
-            {
-                var customAttributes = method.GetCustomAttributes(typeof(StateIdAttribute), false);
-                foreach (var att in customAttributes)
-                {
-                    var a = (StateIdAttribute)att;
-                    _implementations.Add(a.State, method);
+    private void parseMethods(Type type){
+        //get all methods in type
+        var methods = type.GetMethods();
+        foreach(var method in methods){
+            //get StateIdAttribute in each method
+            var att = method.GetCustomAttribute(typeof(StateIdAttribute));
+            if(att != null){
+                //cast to StateId and save value with MethodInfo
+                var state = (StateIdAttribute)att;
+                if(string.IsNullOrWhiteSpace(state.State)){
+                    throw new NullReferenceException("State value can`t be null or empty.");
                 }
+                _implementations.Add(state.State, method);
             }
         }
-    }
-
-    public void CallMethod(string path, Update update){
-        var method = _implementations[path];
-        var _class = Activator.CreateInstance(method.ReflectedType);
-
-        var baseClass = (Base)_class;
-        baseClass.Bot = _client;
-        baseClass.Update = update;
-        baseClass.UserId = update.Message.Chat.Id;
-
-        method.Invoke(_class, null);
-
-        _userStates[baseClass.UserId] = baseClass.NextState;
     }
 
     public void Dispose()
@@ -64,23 +58,45 @@ public class Tebot : IDisposable, IUpdateHandler
         
     }
 
-    public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
-    {
-        if(update.Message is null)
-            return;
-
-        long userId = update.Message.Chat.Id;
-        string? nowState = null;
-        if(_userStates.TryGetValue(userId, out nowState)){
-            CallMethod(nowState, update);
-        }
-        else{
-            CallMethod(_startState, update);
-        }
-    }
-
     public Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
     {
-        throw exception;
+        throw new NotImplementedException();
     }
+
+    public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+    {
+        if(update.Message == null){
+            return;
+        }
+
+        var id = update.Message.Chat.Id;
+        Base handler;
+        bool isExsist = _userStates.TryGetValue(id, out handler);
+        if(!isExsist){
+            //create
+            var instance = Activator.CreateInstance(stateImplementation);
+            if(instance == null)
+                throw new Exception("Something went wrong");
+            //cast and set values
+            handler = (Base)instance;
+            handler.Bot = _client;
+            handler.UserId = id;
+            //add to dict
+            _userStates[id] = handler;
+        }
+
+        //add some shit
+        handler.Update = update;
+
+        //check and invoke
+        var method = _implementations[handler.NextState];
+        if(method == null){
+            throw new NotImplementedException($"Member with state {handler.NextState} are not found.");
+        }
+        method.Invoke(handler, null);
+
+        
+    }
+
+    
 }

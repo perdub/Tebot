@@ -4,7 +4,7 @@ using Telegram.Bot;
 namespace TebotConsole;
 
 public class StateMachine : Base{
-    [StateId(State = "Hello")]
+    [StateId(State = "/start")]
     public async Task HelloWord(){
         await Bot.SendTextMessageAsync(UserId, "Hello world");
         NextState = "Bye";
@@ -12,6 +12,6 @@ public class StateMachine : Base{
     [StateId(State = "Bye")]
     public async Task ByeWord(){
         await Bot.SendTextMessageAsync(UserId, "Bye world");
-        NextState = "Hello";
+        NextState = "/start";
     }
 }
