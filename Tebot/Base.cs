@@ -20,3 +20,9 @@ public abstract class Base{
         return res;
     }
 }
+
+public abstract class CallbackBase : Base
+{
+    public CallbackManager CallbackManager {get;set;}
+    public abstract void OnCallback(CallbackQuery callbackQuery);
+}

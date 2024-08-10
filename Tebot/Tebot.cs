@@ -65,10 +65,16 @@ public class Tebot: IDisposable, IUpdateHandler
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
-        if(update.Message == null){
+        if(update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery){
+            await CallbackProcess(update.CallbackQuery);
             return;
         }
+        if(update.Type == Telegram.Bot.Types.Enums.UpdateType.Message){
+            await MessagesProcess(update);
+        }
+    }
 
+    private async Task MessagesProcess(Update update){
         var id = update.Message.Chat.Id;
         Base handler;
         bool isExsist = _userStates.TryGetValue(id, out handler);
@@ -95,8 +101,24 @@ public class Tebot: IDisposable, IUpdateHandler
         }
         method.Invoke(handler, null);
 
-        
     }
 
-    
+    private async Task CallbackProcess(CallbackQuery callbackQuery){
+        Base state;
+        bool isSuss = _userStates.TryGetValue(callbackQuery.From.Id, out state);
+        if(!isSuss){
+            throw new Exception("Unknown user");
+        }
+        if(state is CallbackBase callbackState){
+            callbackState.OnCallback(callbackQuery);
+        }
+        else{
+            throw new NotSupportedException("Method to handle updates are not found. Are you sure that you state class is derived from CallbackBase?");
+        }
+    }
+
+    public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
+    {
+        Console.WriteLine($"{exception.Message} {exception.Source}");
+    }
 }
