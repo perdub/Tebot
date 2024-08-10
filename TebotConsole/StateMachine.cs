@@ -34,7 +34,7 @@ public class CallbackStateMachine : CallbackBase{
 
     public override async void OnCallback(CallbackQuery callbackQuery)
     {
-        await Bot.SendTextMessageAsync(UserId, callbackQuery.Data + callbackQuery.Id);
+        await Bot.AnswerCallbackQueryAsync(callbackQuery.Id, "БОЛЬШИЕ ПИСЬКИ ААААААА!!!!", true);
 
     }
 }

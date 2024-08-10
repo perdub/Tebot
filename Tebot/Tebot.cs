@@ -2,6 +2,7 @@ using Telegram.Bot;
 using System.Reflection;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Tebot;
 
@@ -14,9 +15,13 @@ public class Tebot: IDisposable, IUpdateHandler
     private Dictionary<long, Base> _userStates = new Dictionary<long, Base>();
 
     private string _startState;
-    private Type stateImplementation;
+    private Type _stateImplementation;
+    private IServiceProvider _serviceProvider;
 
-    public Tebot(string token, Type stateImplementation, string startState="/start", HttpClient httpClient = null)
+    private ConstructorInfo _preferedConstructor;
+    private ParameterInfo[] _preferedConstructorParams;
+
+    public Tebot(string token, Type stateImplementation, string startState="/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
     {
         if(!stateImplementation.IsClass){
             throw new ArgumentException("statesImplementations should be a class.");
@@ -27,11 +32,12 @@ public class Tebot: IDisposable, IUpdateHandler
 
         _implementations = new Dictionary<string, MethodInfo>();
         _client = new TelegramBotClient(token, null);
-
+        _serviceProvider = serviceProvider;
         _startState = startState;
-        this.stateImplementation = stateImplementation;
+        this._stateImplementation = stateImplementation;
 
         parseMethods(stateImplementation);
+        findConstructor(stateImplementation);
 
         _client.StartReceiving(this);
     }
@@ -51,6 +57,44 @@ public class Tebot: IDisposable, IUpdateHandler
                 _implementations.Add(state.State, method);
             }
         }
+    }
+
+    private void findConstructor(Type type){
+        var constructors = type.GetConstructors();
+        ParameterInfo[] parameters = Array.Empty<ParameterInfo>();
+        ConstructorInfo constructor = null;
+        foreach(var constr in constructors){
+            var loc = constr.GetParameters();
+            if(loc.Length>parameters.Length){
+                constructor = constr;
+                parameters = loc;
+            }
+        }
+
+        _preferedConstructor = constructor;
+        _preferedConstructorParams = parameters;
+    }
+    private Base CreateInstance(){
+        if(_serviceProvider is not null){
+            return (Base)ActivatorUtilities.CreateInstance(_serviceProvider, _stateImplementation);
+        }
+        return CreateBaseInstance();
+    }
+    private Base CreateBaseInstance(){
+        object?[]? parameters = new object[_preferedConstructorParams.Length];
+        if(_serviceProvider != null){
+            for(int i = 0; i<_preferedConstructorParams.Length; i++){
+                var param = _preferedConstructorParams[i];
+                Type paramType = param.ParameterType;
+                parameters[i] = _serviceProvider.GetRequiredService(paramType);
+            }
+        }
+        else{
+            for(int i = 0; i<_preferedConstructorParams.Length; i++){
+                    parameters[i] = null;
+            }
+        }
+        return (Base)Activator.CreateInstance(_stateImplementation, parameters);
     }
 
     public void Dispose()
@@ -80,7 +124,7 @@ public class Tebot: IDisposable, IUpdateHandler
         bool isExsist = _userStates.TryGetValue(id, out handler);
         if(!isExsist){
             //create
-            var instance = Activator.CreateInstance(stateImplementation);
+            var instance = CreateInstance();
             if(instance == null)
                 throw new Exception("Something went wrong");
             //cast and set values
