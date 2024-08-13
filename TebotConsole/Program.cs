@@ -6,7 +6,9 @@ class Program
 {
     static void Main(string[] args)
     {
-        var tb = new Tebot.Tebot("6510109654:AAGCKkSYDlyS6GVU-Y4UFZu3oWAw8rgGNLI", typeof(CallbackStateMachine));
+        var tb = new Tebot.Tebot("6510000000:AAGCKkSY***", typeof(CallbackStateMachine));
+        tb.Run();
         Console.ReadKey();
+        tb.Stop();
     }
 }

@@ -3,10 +3,11 @@ using System.Reflection;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Tebot;
 
-public class Tebot: IDisposable, IUpdateHandler
+public class Tebot: IDisposable, IUpdateHandler, IHostedService 
 {
     private ITelegramBotClient _client;
 
@@ -38,8 +39,6 @@ public class Tebot: IDisposable, IUpdateHandler
 
         parseMethods(stateImplementation);
         findConstructor(stateImplementation);
-
-        _client.StartReceiving(this);
     }
 
     private void parseMethods(Type type){
@@ -164,5 +163,35 @@ public class Tebot: IDisposable, IUpdateHandler
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
         Console.WriteLine($"{exception.Message} {exception.Source}");
+    }
+
+
+
+    private async Task run(CancellationToken cancellationToken){
+        _client.ReceiveAsync(this, cancellationToken: cancellationToken);
+    }
+    public async Task Stop(){
+        //try to stop
+        botStopToken.Cancel();
+        _client = null;
+        _implementations = null;
+        _userStates = null;
+    }
+
+    public async Task Run(){
+         botStopToken = new CancellationTokenSource();
+        await run(botStopToken.Token);
+    }
+
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await Run();
+    }
+
+    private CancellationTokenSource botStopToken;
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        await Stop();
     }
 }
