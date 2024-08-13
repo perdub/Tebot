@@ -12,6 +12,12 @@ public abstract class Base{
     public ITelegramBotClient Bot {get;internal set;}
     public long UserId{get; internal set;}
 
+    public string Text{
+        get{
+            return Update.Message.Text;
+        }
+    }
+
     /// <summary>
     /// Method which helps you get user input as int32
     /// </summary>
@@ -34,6 +40,8 @@ public abstract class Base{
     {
         throw new NotImplementedException($"Member with state {State} are not found.");
     }
+
+    
 }
 
 public abstract class CallbackBase : Base
