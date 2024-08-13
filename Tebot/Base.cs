@@ -23,11 +23,21 @@ public abstract class Base{
         }
         return res;
     }
+
+    /// <summary>
+    /// you should override this method if you want to process possible unknnown states
+    /// </summary>
+    /// <param name="State"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public virtual async Task ProccessUnknownState(string State)
+    {
+        throw new NotImplementedException($"Member with state {State} are not found.");
+    }
 }
 
 public abstract class CallbackBase : Base
 {
-    public CallbackManager CallbackManager {get;set;}
     /// <summary>
     /// please remember about AnswerCallbackQueryAsync, you should call it yourself
     /// </summary>

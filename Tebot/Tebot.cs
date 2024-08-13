@@ -140,7 +140,8 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         //check and invoke
         var method = _implementations[handler.NextState];
         if(method == null){
-            throw new NotImplementedException($"Member with state {handler.NextState} are not found.");
+            await handler.ProccessUnknownState(handler.NextState);
+            return;
         }
         method.Invoke(handler, null);
 
