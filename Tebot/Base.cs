@@ -1,5 +1,6 @@
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Tebot;
 
@@ -41,7 +42,34 @@ public abstract class Base{
         throw new NotImplementedException($"Member with state {State} are not found.");
     }
 
-    
+    /// <summary>
+    /// method to generate keyboard
+    /// </summary>
+    /// <param name="values"></param>
+    /// <returns></returns>
+    protected IReplyMarkup fastKeyboardBuilder(params string[] values)
+    {
+        var km = new ReplyKeyboardMarkup(true);
+        foreach (var v in values)
+        {
+            km.AddButton(v);
+        }
+        return km;
+    }
+    /// <summary>
+    /// clear keyboard
+    /// </summary>
+    /// <returns></returns>
+    protected IReplyMarkup clearKeyboard()
+    {
+        return new ReplyKeyboardRemove();
+    }
+    /// <summary>
+    /// method witch called before Tebot instance will be stopped
+    /// </summary>
+    public virtual void BeforeStop(){
+
+    }
 }
 
 public abstract class CallbackBase : Base
