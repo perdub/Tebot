@@ -43,6 +43,24 @@ public abstract class Base{
     }
 
     /// <summary>
+    /// call after each update with this user
+    /// </summary>
+    /// <param name="update"></param>
+    /// <returns></returns>
+    public virtual Task OnUpdate(Update update){
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// call if user input starts with / (for example: /start /help /clear)
+    /// </summary>
+    /// <param name="command"></param>
+    /// <returns></returns>
+    public virtual Task OnCommand(string command){
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// method to generate keyboard
     /// </summary>
     /// <param name="values"></param>

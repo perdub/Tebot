@@ -137,6 +137,11 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         //add some shit
         handler.Update = update;
 
+        await handler.OnUpdate(update);
+        if(update.Message?.Text is not null && update.Message.Text.StartsWith('/')){
+            await handler.OnCommand(update.Message.Text);
+        }
+
         //check and invoke
         var method = _implementations[handler.NextState];
         if(method == null){
