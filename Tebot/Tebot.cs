@@ -112,9 +112,9 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
             await CallbackProcess(update.CallbackQuery);
             return;
         }
-        if(update.Type == Telegram.Bot.Types.Enums.UpdateType.Message){
+        //if(update.Type == Telegram.Bot.Types.Enums.UpdateType.Message){
             await MessagesProcess(update);
-        }
+        //}
     }
 
     private long tryToParseId(Update update){
