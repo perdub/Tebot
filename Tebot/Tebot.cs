@@ -117,8 +117,20 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         }
     }
 
+    private long tryToParseId(Update update){
+        if(update.Message is not null){
+            return update.Message.Chat.Id;
+        }
+        if(update.PreCheckoutQuery is not null){
+            return update.PreCheckoutQuery.From.Id;
+        }
+        //add more in future
+
+        throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
+    }
+
     private async Task MessagesProcess(Update update){
-        var id = update.Message.Chat.Id;
+        var id = tryToParseId(update);
         Base handler;
         bool isExsist = _userStates.TryGetValue(id, out handler);
         if(!isExsist){
