@@ -153,6 +153,7 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
             handler = (Base)instance;
             handler.Bot = _client;
             handler.UserId = id;
+            await handler.OnCreate(id);
             //add to dict
             _userStates[id] = handler;
         }

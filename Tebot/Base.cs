@@ -88,6 +88,15 @@ public abstract class Base{
     public virtual void BeforeStop(){
 
     }
+
+    /// <summary>
+    /// call when Tebot recive new update for this user and user not use bot yet. for example, you can load some data from database
+    /// </summary>
+    /// <param name="id">chat new id</param>
+    /// <returns></returns>
+    public virtual Task OnCreate(long id){
+        return Task.CompletedTask;
+    }
 }
 
 public abstract class CallbackBase : Base
