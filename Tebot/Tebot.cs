@@ -124,12 +124,23 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         if(update.PreCheckoutQuery is not null){
             return update.PreCheckoutQuery.From.Id;
         }
+
+        if(update.MyChatMember is not null){
+            return update.MyChatMember.From.Id;
+        }
+        if(update.ChannelPost is not null){
+            return update.ChannelPost.Chat.Id;
+        }
+        if(update.EditedChannelPost is not null){
+            return update.EditedChannelPost.Chat.Id;
+        }
         //add more in future
 
         throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
     }
 
     private async Task MessagesProcess(Update update){
+        try{
         var id = tryToParseId(update);
         Base handler;
         bool isExsist = _userStates.TryGetValue(id, out handler);
@@ -161,7 +172,10 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
             return;
         }
         method.Invoke(handler, null);
-
+        }
+        catch(Exception e){
+            Console.WriteLine($"exception: {e.Message} {e.InnerException} {e.StackTrace}");
+        }
     }
 
     private async Task CallbackProcess(CallbackQuery callbackQuery){
@@ -180,7 +194,7 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
 
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
-        Console.WriteLine($"{exception.Message} {exception.Source}");
+        Console.WriteLine($"{exception.Message} {exception.Source} {exception.StackTrace} {exception.InnerException}");
     }
 
 
