@@ -5,7 +5,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Payments;
 using Telegram.Bot.Types.ReplyMarkups;
 
-public class States : CallbackBase{
+public class States : Base{
     [StateId(State = "/start")]
     public async Task HelloWord(){
         var k = new InlineKeyboardMarkup().AddButton("Случайное число...", "a");
@@ -14,7 +14,7 @@ public class States : CallbackBase{
         NextState = "/start";
     }
 
-    public override async void OnCallback(CallbackQuery callbackQuery)
+    public override async Task OnCallback(CallbackQuery callbackQuery)
     {
         await Bot.SendTextMessageAsync(UserId, "Тебе тоже)");
         await Bot.AnswerCallbackQueryAsync(callbackQuery.Id, (Random.Shared.NextInt64()-Random.Shared.NextInt64()).ToString(), true);

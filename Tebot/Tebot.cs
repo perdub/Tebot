@@ -4,13 +4,14 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace Tebot;
 
-public class Tebot: IDisposable, IUpdateHandler, IHostedService 
+public class Tebot : IDisposable, IUpdateHandler, IHostedService
 {
     private ITelegramBotClient _client;
-
+    private ILogger<Tebot>? _logger;
     private Dictionary<string, MethodInfo> _implementations;
 
     private Dictionary<long, Base> _userStates = new Dictionary<long, Base>();
@@ -22,13 +23,20 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
     private ConstructorInfo _preferedConstructor;
     private ParameterInfo[] _preferedConstructorParams;
 
-    public Tebot(string token, Type stateImplementation, string startState="/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
+    public Tebot(string token, Type stateImplementation, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
     {
-        if(!stateImplementation.IsClass){
+        if (!stateImplementation.IsClass)
+        {
             throw new ArgumentException("statesImplementations should be a class.");
         }
-        if(string.IsNullOrEmpty(token)){
+        if (string.IsNullOrEmpty(token))
+        {
             throw new NullReferenceException("token can`t be a null or empty");
+        }
+
+        if (serviceProvider != null)
+        {
+            _logger = serviceProvider.GetService<ILogger<Tebot>>();
         }
 
         _implementations = new Dictionary<string, MethodInfo>();
@@ -41,30 +49,38 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         findConstructor(stateImplementation);
     }
 
-    private void parseMethods(Type type){
+    private void parseMethods(Type type)
+    {
         //get all methods in type
         var methods = type.GetMethods();
-        foreach(var method in methods){
+        foreach (var method in methods)
+        {
             //get StateIdAttribute in each method
             var att = method.GetCustomAttribute(typeof(StateIdAttribute));
-            if(att != null){
+            if (att != null)
+            {
                 //cast to StateId and save value with MethodInfo
                 var state = (StateIdAttribute)att;
-                if(string.IsNullOrWhiteSpace(state.State)){
+                if (string.IsNullOrWhiteSpace(state.State))
+                {
                     throw new NullReferenceException("State value can`t be null or empty.");
                 }
                 _implementations.Add(state.State, method);
+                _logger?.LogDebug("New state method: {} {}", method, state.State);
             }
         }
     }
 
-    private void findConstructor(Type type){
+    private void findConstructor(Type type)
+    {
         var constructors = type.GetConstructors();
         ParameterInfo[] parameters = Array.Empty<ParameterInfo>();
         ConstructorInfo constructor = null;
-        foreach(var constr in constructors){
+        foreach (var constr in constructors)
+        {
             var loc = constr.GetParameters();
-            if(loc.Length>parameters.Length){
+            if (loc.Length > parameters.Length)
+            {
                 constructor = constr;
                 parameters = loc;
             }
@@ -73,24 +89,31 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         _preferedConstructor = constructor;
         _preferedConstructorParams = parameters;
     }
-    private Base CreateInstance(){
-        if(_serviceProvider is not null){
+    private Base CreateInstance()
+    {
+        if (_serviceProvider is not null)
+        {
             return (Base)ActivatorUtilities.CreateInstance(_serviceProvider, _stateImplementation);
         }
         return CreateBaseInstance();
     }
-    private Base CreateBaseInstance(){
+    private Base CreateBaseInstance()
+    {
         object?[]? parameters = new object[_preferedConstructorParams.Length];
-        if(_serviceProvider != null){
-            for(int i = 0; i<_preferedConstructorParams.Length; i++){
+        if (_serviceProvider != null)
+        {
+            for (int i = 0; i < _preferedConstructorParams.Length; i++)
+            {
                 var param = _preferedConstructorParams[i];
                 Type paramType = param.ParameterType;
                 parameters[i] = _serviceProvider.GetRequiredService(paramType);
             }
         }
-        else{
-            for(int i = 0; i<_preferedConstructorParams.Length; i++){
-                    parameters[i] = null;
+        else
+        {
+            for (int i = 0; i < _preferedConstructorParams.Length; i++)
+            {
+                parameters[i] = null;
             }
         }
         return (Base)Activator.CreateInstance(_stateImplementation, parameters);
@@ -98,7 +121,7 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
 
     public void Dispose()
     {
-        
+
     }
 
     public Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -108,102 +131,110 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
-        if(update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery){
-            await CallbackProcess(update.CallbackQuery);
-            return;
-        }
-        //if(update.Type == Telegram.Bot.Types.Enums.UpdateType.Message){
-            await MessagesProcess(update);
-        //}
+        await MessagesProcess(update);
     }
 
-    private long tryToParseId(Update update){
-        if(update.Message is not null){
+    private long tryToParseId(Update update)
+    {
+        if (update.Message is not null)
+        {
             return update.Message.Chat.Id;
         }
-        if(update.PreCheckoutQuery is not null){
+        if (update.PreCheckoutQuery is not null)
+        {
             return update.PreCheckoutQuery.From.Id;
         }
 
-        if(update.MyChatMember is not null){
+        if (update.MyChatMember is not null)
+        {
             return update.MyChatMember.From.Id;
         }
-        if(update.ChannelPost is not null){
+        if (update.ChannelPost is not null)
+        {
             return update.ChannelPost.Chat.Id;
         }
-        if(update.EditedChannelPost is not null){
+        if (update.EditedChannelPost is not null)
+        {
             return update.EditedChannelPost.Chat.Id;
+        }
+        if(update.CallbackQuery is not null){
+            return update.CallbackQuery.From.Id;
         }
         //add more in future
 
         throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
     }
 
-    private async Task MessagesProcess(Update update){
-        try{
-        var id = tryToParseId(update);
-        Base handler;
-        bool isExsist = _userStates.TryGetValue(id, out handler);
-        if(!isExsist){
-            //create
-            var instance = CreateInstance();
-            if(instance == null)
-                throw new Exception("Something went wrong");
-            //cast and set values
-            handler = (Base)instance;
-            handler.Bot = _client;
-            handler.UserId = id;
-            await handler.OnCreate(id);
-            //add to dict
-            _userStates[id] = handler;
-        }
+    private async Task MessagesProcess(Update update)
+    {
+        try
+        {
+            var id = tryToParseId(update);
+            Base handler;
+            bool isExsist = _userStates.TryGetValue(id, out handler);
+            _logger?.LogDebug("MessageProcess: id{}, isExsist-{}",id, isExsist);
+            if (!isExsist)
+            {
+                //create
+                var instance = CreateInstance();
+                if (instance == null)
+                    throw new Exception("Something went wrong");
+                //cast and set values
+                handler = (Base)instance;
+                handler.Bot = _client;
+                handler.UserId = id;
+                await handler.OnCreate(id);
+                //add to dict
+                _userStates[id] = handler;
+            }
 
-        //add some shit
-        handler.Update = update;
+            //add some shit
+            handler.Update = update;
 
-        await handler.OnUpdate(update);
-        if(update.Message?.Text is not null && update.Message.Text.StartsWith('/')){
-            await handler.OnCommand(update.Message.Text);
-        }
+            await handler.OnUpdate(update);
+            if (update.Message?.Text is not null && update.Message.Text.StartsWith('/'))
+            {
+                await handler.OnCommand(update.Message.Text);
+            }
 
-        //check and invoke
-        var method = _implementations[handler.NextState];
-        if(method == null){
-            await handler.ProccessUnknownState(handler.NextState);
-            return;
+            if(update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery){
+                await handler.OnCallback(update.CallbackQuery);
+            }
+
+            //check and invoke
+            var method = _implementations[handler.NextState];
+            if (method == null)
+            {
+                await handler.ProccessUnknownState(handler.NextState);
+                return;
+            }
+            method.Invoke(handler, null);
         }
-        method.Invoke(handler, null);
-        }
-        catch(Exception e){
+        catch (Exception e)
+        {
             Console.WriteLine($"exception: {e.Message} {e.InnerException} {e.StackTrace}");
-        }
-    }
-
-    private async Task CallbackProcess(CallbackQuery callbackQuery){
-        Base state;
-        bool isSuss = _userStates.TryGetValue(callbackQuery.From.Id, out state);
-        if(!isSuss){
-            throw new Exception("Unknown user");
-        }
-        if(state is CallbackBase callbackState){
-            callbackState.OnCallback(callbackQuery);
-        }
-        else{
-            throw new NotSupportedException("Method to handle updates are not found. Are you sure that you state class is derived from CallbackBase?");
         }
     }
 
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
+        if(source == HandleErrorSource.PollingError){
+            //ignore piece of shit(telegram shitty servers)
+            return;
+        }
+        _logger?.LogError("Fatal error: {}", exception);
         Console.WriteLine($"{exception.Message} {exception.Source} {exception.StackTrace} {exception.InnerException}");
     }
 
 
 
-    private async Task run(CancellationToken cancellationToken){
+    private async Task run(CancellationToken cancellationToken)
+    {
         _client.ReceiveAsync(this, cancellationToken: cancellationToken);
     }
-    public async Task Stop(){
+    public async Task Stop()
+    {
+        _logger?.LogDebug("Tebot is stopping");
         //try to stop
         botStopToken.Cancel();
         _client = null;
@@ -211,8 +242,10 @@ public class Tebot: IDisposable, IUpdateHandler, IHostedService
         _userStates = null;
     }
 
-    public async Task Run(){
-         botStopToken = new CancellationTokenSource();
+    public async Task Run()
+    {
+        botStopToken = new CancellationTokenSource();
+        _logger?.LogDebug("Tebot is starting");
         await run(botStopToken.Token);
     }
 

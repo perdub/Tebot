@@ -97,13 +97,11 @@ public abstract class Base{
     public virtual Task OnCreate(long id){
         return Task.CompletedTask;
     }
-}
-
-public abstract class CallbackBase : Base
-{
     /// <summary>
     /// please remember about AnswerCallbackQueryAsync, you should call it yourself
     /// </summary>
     /// <param name="callbackQuery">Info about callback</param>
-    public abstract void OnCallback(CallbackQuery callbackQuery);
+    public virtual Task OnCallback(CallbackQuery callbackQuery){
+        return Task.CompletedTask;
+    }
 }

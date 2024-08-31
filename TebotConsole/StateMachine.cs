@@ -18,7 +18,7 @@ public class StateMachine : Base{
     }
 }
 
-public class CallbackStateMachine : CallbackBase{
+public class CallbackStateMachine : Base{
 
     [StateId(State = "/start")]
     public async Task HelloWord(){
@@ -32,7 +32,7 @@ public class CallbackStateMachine : CallbackBase{
         NextState = "/start";
     }
 
-    public override async void OnCallback(CallbackQuery callbackQuery)
+    public override async Task OnCallback(CallbackQuery callbackQuery)
     {
         await Bot.AnswerCallbackQueryAsync(callbackQuery.Id, "БОЛЬШИЕ ПИСЬКИ ААААААА!!!!", true);
 
