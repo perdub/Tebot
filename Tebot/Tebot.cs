@@ -157,7 +157,8 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         {
             return update.EditedChannelPost.Chat.Id;
         }
-        if(update.CallbackQuery is not null){
+        if (update.CallbackQuery is not null)
+        {
             return update.CallbackQuery.From.Id;
         }
         //add more in future
@@ -172,7 +173,7 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
             var id = tryToParseId(update);
             Base handler;
             bool isExsist = _userStates.TryGetValue(id, out handler);
-            _logger?.LogDebug("MessageProcess: id{}, isExsist-{}",id, isExsist);
+            _logger?.LogDebug("MessageProcess: id{}, isExsist-{}", id, isExsist);
             if (!isExsist)
             {
                 //create
@@ -191,24 +192,35 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
             //add some shit
             handler.Update = update;
 
-            await handler.OnUpdate(update);
-            if (update.Message?.Text is not null && update.Message.Text.StartsWith('/'))
+            try
             {
-                await handler.OnCommand(update.Message.Text);
-            }
+                await handler.OnUpdate(update);
 
-            if(update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery){
-                await handler.OnCallback(update.CallbackQuery);
-            }
+                if (update.Message?.Text is not null && update.Message.Text.StartsWith('/'))
+                {
+                    await handler.OnCommand(update.Message.Text);
+                }
 
-            //check and invoke
-            var method = _implementations[handler.NextState];
-            if (method == null)
+                if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
+                {
+                    await handler.OnCallback(update.CallbackQuery);
+                    return;
+                }
+
+                //check and invoke
+                var method = _implementations[handler.NextState];
+                if (method == null)
+                {
+                    await handler.ProccessUnknownState(handler.NextState);
+                    return;
+                }
+                method.Invoke(handler, null);
+
+            }
+            catch (Exception e)
             {
-                await handler.ProccessUnknownState(handler.NextState);
-                return;
+                await handler.OnException(e);
             }
-            method.Invoke(handler, null);
         }
         catch (Exception e)
         {
@@ -218,7 +230,8 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
 
     public async Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, HandleErrorSource source, CancellationToken cancellationToken)
     {
-        if(source == HandleErrorSource.PollingError){
+        if (source == HandleErrorSource.PollingError)
+        {
             //ignore piece of shit(telegram shitty servers)
             return;
         }

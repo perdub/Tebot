@@ -20,6 +20,15 @@ public abstract class Base{
     }
 
     /// <summary>
+    /// this method calls when exceptions happends at state method
+    /// </summary>
+    /// <param name="exception"></param>
+    /// <returns></returns>
+    public virtual Task OnException(Exception exception){
+        throw exception;
+    }
+
+    /// <summary>
     /// Method which helps you get user input as int32
     /// </summary>
     /// <returns>Number which user send, null if fall to parse</returns>
