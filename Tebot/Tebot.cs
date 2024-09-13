@@ -23,6 +23,12 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
     private ConstructorInfo _preferedConstructor;
     private ParameterInfo[] _preferedConstructorParams;
 
+    public ITelegramBotClient Client{
+        get{
+            return _client;
+        }
+    }
+
     public Tebot(string token, Type stateImplementation, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
     {
         if (!stateImplementation.IsClass)
@@ -41,6 +47,7 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
 
         _implementations = new Dictionary<string, MethodInfo>();
         _client = new TelegramBotClient(token, null);
+        
         _serviceProvider = serviceProvider;
         _startState = startState;
         this._stateImplementation = stateImplementation;
