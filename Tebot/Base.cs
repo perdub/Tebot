@@ -113,4 +113,13 @@ public abstract class Base{
     public virtual Task OnCallback(CallbackQuery callbackQuery){
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// recive all inline querys from user
+    /// </summary>
+    /// <param name="inlineQuery"></param>
+    /// <returns></returns>
+    public virtual Task OnInlineQuery(InlineQuery inlineQuery){
+        return Task.CompletedTask;
+    }
 }

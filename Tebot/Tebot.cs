@@ -24,7 +24,8 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
     private ParameterInfo[] _preferedConstructorParams;
 
     public ITelegramBotClient Client{
-        get{
+        get
+        {
             return _client;
         }
     }
@@ -168,6 +169,9 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         {
             return update.CallbackQuery.From.Id;
         }
+        if(update.InlineQuery is not null){
+            return update.InlineQuery.From.Id;
+        }
         //add more in future
 
         throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
@@ -211,6 +215,11 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
                 if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
                 {
                     await handler.OnCallback(update.CallbackQuery);
+                    return;
+                }
+
+                if(update.Type == Telegram.Bot.Types.Enums.UpdateType.InlineQuery){
+                    await handler.OnInlineQuery(update.InlineQuery);
                     return;
                 }
 
