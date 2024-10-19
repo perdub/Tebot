@@ -169,8 +169,13 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         {
             return update.CallbackQuery.From.Id;
         }
-        if(update.InlineQuery is not null){
+        if(update.InlineQuery is not null)
+        {
             return update.InlineQuery.From.Id;
+        }
+        if(update.EditedMessage is not null)
+        {
+            return update.EditedMessage.Chat.Id;
         }
         //add more in future
 
