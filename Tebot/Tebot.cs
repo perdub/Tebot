@@ -289,4 +289,8 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
     {
         await Stop();
     }
+
+    public IEnumerable<Base> IterateOverClients(){
+        return _userStates.Select(a=> a.Value);
+    }
 }
