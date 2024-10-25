@@ -122,4 +122,13 @@ public abstract class Base{
     public virtual Task OnInlineQuery(InlineQuery inlineQuery){
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// event when this Base instance create to load exsist client, for example, get client state from database
+    /// </summary>
+    /// <param name="id">Chat id</param>
+    /// <returns></returns>
+    public virtual Task OnLoad(long id){
+        return Task.CompletedTask;
+    }
 }

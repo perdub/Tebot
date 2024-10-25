@@ -23,6 +23,8 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
     private ConstructorInfo _preferedConstructor;
     private ParameterInfo[] _preferedConstructorParams;
 
+    private StateLoader _stateLoader;
+
     public ITelegramBotClient Client{
         get
         {
@@ -30,7 +32,7 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         }
     }
 
-    public Tebot(string token, Type stateImplementation, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
+    public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
     {
         if (!stateImplementation.IsClass)
         {
@@ -47,10 +49,11 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         }
 
         _implementations = new Dictionary<string, MethodInfo>();
-        _client = new TelegramBotClient(token, null);
+        _client = new TelegramBotClient(token, httpClient);
         
         _serviceProvider = serviceProvider;
         _startState = startState;
+        _stateLoader = stateLoader;
         this._stateImplementation = stateImplementation;
 
         parseMethods(stateImplementation);
@@ -260,10 +263,24 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         Console.WriteLine($"{exception.Message} {exception.Source} {exception.StackTrace} {exception.InnerException}");
     }
 
-
+    private void linkLoadUsers(){
+        _logger.LogDebug("Start add loaded users...");
+        if(_stateLoader.Strategy == LoaderStrategy.None){
+            _logger.LogDebug("LoaderStrategy is None, skip...");
+            return;
+        }
+        var loaded = _stateLoader.asTuptes();
+        foreach(var state in loaded){
+            state.Item2.Bot = _client;
+            _userStates.Add(state.Item1, state.Item2);
+        }
+        
+        _logger.LogDebug("Add all loaded states in dictionary.");
+    }
 
     private async Task run(CancellationToken cancellationToken)
     {
+        linkLoadUsers();
         _client.ReceiveAsync(this, cancellationToken: cancellationToken);
     }
     public async Task Stop()

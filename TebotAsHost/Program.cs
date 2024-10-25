@@ -6,7 +6,7 @@ using Tebot;
 var builder = Host.CreateApplicationBuilder();
 builder.Configuration.AddJsonFile("config.json");
 builder.Services.AddHostedService<Tebot.Tebot>((provider)=>{
-    return new Tebot.Tebot(builder.Configuration.GetValue<string>("token"), typeof(States), serviceProvider: provider);
+    return new Tebot.Tebot(builder.Configuration.GetValue<string>("token"), typeof(States), StateLoader.Empty(), serviceProvider: provider);
 });
 var host = builder.Build();
 host.Run();
