@@ -270,11 +270,13 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
             return;
         }
         var loaded = _stateLoader.asTuptes();
+        long i = 0;
         foreach(var state in loaded){
+            i++;
             state.Item2.Bot = _client;
             _userStates.Add(state.Item1, state.Item2);
         }
-        
+        _logger.LogInformation($"Load {i} client states.");
         _logger.LogDebug("Add all loaded states in dictionary.");
     }
 
