@@ -32,6 +32,7 @@ public class StateLoader<T>(IServiceProvider? serviceProvider) : StateLoader whe
             .Select((id)=>{
                 T inst = ActivatorUtilities.CreateInstance<T>(serviceProvider);
                 inst.UserId = id;
+                inst.IsLoaded = true;
                 inst.OnLoad(id);
                 return inst;
             });

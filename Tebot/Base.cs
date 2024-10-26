@@ -19,6 +19,17 @@ public abstract class Base{
         }
     }
 
+    private bool _isLoaded = false;
+
+    public bool IsLoaded{
+        get{
+            return _isLoaded;
+        }
+        internal set{
+            _isLoaded = value;
+        }
+    }
+
     /// <summary>
     /// this method calls when exceptions happends at state method
     /// </summary>
