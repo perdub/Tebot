@@ -31,4 +31,8 @@ public class States : Base{
             await Bot.SendTextMessageAsync(UserId, JsonSerializer.Serialize(update));
         }
     }
+    [Command("/bebra")]
+    public async Task Bebrachka(int abb = 150){
+        await Bot.SendTextMessageAsync(UserId, $"БЕБРАЧКУ ПОНЮХАЙ x{abb}");
+    }
 }

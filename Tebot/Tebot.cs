@@ -13,7 +13,7 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
     private ITelegramBotClient _client;
     private ILogger<Tebot>? _logger;
     private Dictionary<string, MethodInfo> _implementations;
-
+    private Dictionary<string, MethodInfo> _commands;
     private Dictionary<long, Base> _userStates = new Dictionary<long, Base>();
 
     private string _startState;
@@ -49,6 +49,7 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         }
 
         _implementations = new Dictionary<string, MethodInfo>();
+        _commands = new Dictionary<string, MethodInfo>();
         _client = new TelegramBotClient(token, httpClient);
         
         _serviceProvider = serviceProvider;
@@ -78,6 +79,20 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
                 }
                 _implementations.Add(state.State, method);
                 _logger?.LogDebug("New state method: {} {}", method, state.State);
+            }
+
+            //get CommandAtribute in each method
+            var command = method.GetCustomAttribute(typeof(CommandAttribute));
+            if (command != null)
+            {
+                //cast to StateId and save value with MethodInfo
+                var comm = (CommandAttribute)command;
+                if (string.IsNullOrWhiteSpace(comm.Command))
+                {
+                    throw new NullReferenceException("Command name can`t be null or empty.");
+                }
+                _commands.Add(comm.Command, method);
+                _logger?.LogDebug("New command method: {} {}", method, comm.Command);
             }
         }
     }
@@ -217,6 +232,20 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
 
                 if (update.Message?.Text is not null && update.Message.Text.StartsWith('/'))
                 {
+                    var actualCommand = update.Message.Text.Split(' ').FirstOrDefault("");
+                    if(actualCommand is not null){
+                        MethodInfo? commandMethod;
+                        bool isSuss = _commands.TryGetValue(actualCommand, out commandMethod);
+                        if(isSuss && commandMethod is not null){
+                            var map = mapParams(commandMethod, update.Message.Text);
+                            if(map.Item1){
+                                var res = commandMethod.Invoke(handler, map.Item2);
+                                if(res is Task tsk){
+                                    await tsk.WaitAsync(CancellationToken.None);
+                                }
+                            }
+                        }
+                    }
                     await handler.OnCommand(update.Message.Text);
                 }
 
@@ -261,6 +290,42 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         }
         _logger?.LogError("Fatal error: {}", exception);
         Console.WriteLine($"{exception.Message} {exception.Source} {exception.StackTrace} {exception.InnerException}");
+    }
+
+    private (bool, object?[]?) mapParams(MethodInfo method, string str)
+    {
+        var _params = method.GetParameters();
+        var arr = str.Split(' ');
+        if(_params.Length != arr.Length - 1){
+            _logger?.LogWarning($"{method.Name}() params count dosent match with count of parced params");
+        }
+        object?[] res = new object[_params.Length];
+        for(int i = 0; i<_params.Length;i++){
+            var param = _params[i];
+            //если размер массива введеных значений меньше чем количество параметров подставляем значение по умолчанию или null
+            if(arr.Length <= i+2){
+                var deflt = param.DefaultValue;
+                res[i] = deflt;
+                continue;
+            }
+
+            if(param.ParameterType == typeof(System.Int32)){
+                res[i] = Convert.ToInt32(arr[i+1]);
+            }
+            else if(param.ParameterType == typeof(System.Int64)){
+                res[i] = Convert.ToInt64(arr[i+1]);
+            }
+            else if(param.ParameterType == typeof(System.Double)){
+                res[i] = Convert.ToDouble(arr[i+1]);
+            }
+            else if(param.ParameterType == typeof(System.String)){
+                res[i] = arr[i+1];
+            }
+            else{
+                return (false, null);
+            }
+        }
+        return (true, res);
     }
 
     private void linkLoadUsers(){
