@@ -303,7 +303,7 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         for(int i = 0; i<_params.Length;i++){
             var param = _params[i];
             //если размер массива введеных значений меньше чем количество параметров подставляем значение по умолчанию или null
-            if(arr.Length <= i+2){
+            if(arr.Length <= i+1){
                 var deflt = param.DefaultValue;
                 res[i] = deflt;
                 continue;
