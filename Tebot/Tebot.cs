@@ -61,6 +61,18 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
         findConstructor(stateImplementation);
     }
 
+    private InvokeMode getInvokeAttributeValue(MethodInfo methodInfo){
+        var comm = methodInfo.GetCustomAttribute<CommandAttribute>();
+        if(comm != null){
+            return comm.InvokeMode;
+        }
+        var state = methodInfo.GetCustomAttribute<StateIdAttribute>();
+        if(state != null){
+            return state.InvokeMode;
+        }
+        return InvokeMode.Sync;
+    }
+
     private void parseMethods(Type type)
     {
         //get all methods in type
@@ -237,10 +249,11 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
                         MethodInfo? commandMethod;
                         bool isSuss = _commands.TryGetValue(actualCommand, out commandMethod);
                         if(isSuss && commandMethod is not null){
+                            var inv = getInvokeAttributeValue(commandMethod);
                             var map = mapParams(commandMethod, update.Message.Text);
                             if(map.Item1){
                                 var res = commandMethod.Invoke(handler, map.Item2);
-                                if(res is Task tsk){
+                                if(inv == InvokeMode.Sync && res is Task tsk){
                                     await tsk.WaitAsync(CancellationToken.None);
                                 }
                             }
@@ -267,7 +280,11 @@ public class Tebot : IDisposable, IUpdateHandler, IHostedService
                     await handler.ProccessUnknownState(handler.NextState);
                     return;
                 }
-                method.Invoke(handler, null);
+                var invk = getInvokeAttributeValue(method);
+                var rslt = method.Invoke(handler, null);
+                if(invk == InvokeMode.Sync && rslt is Task tsk1){
+                    tsk1.Wait();
+                }
 
             }
             catch (Exception e)
