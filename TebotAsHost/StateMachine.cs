@@ -10,7 +10,7 @@ public class States : Base{
     public async Task HelloWord(){
         var k = new InlineKeyboardMarkup().AddButton("Случайное число...", "a");
         await Bot.SendTextMessageAsync(UserId, "ЖМИ! ЖМИ! ЖМИ!", replyMarkup:k);
-        await Bot.SendInvoiceAsync(UserId, "заголовок", "на презервативы.", Random.Shared.NextInt64().ToString(), null, "XTR", new LabeledPrice[]{new LabeledPrice("label", 100)}, startParameter:"iwantittoo");
+        await Bot.SendInvoiceAsync(UserId, "заголовок", "на презервативы.", Random.Shared.NextInt64().ToString(),  "XTR", new LabeledPrice[]{new LabeledPrice("label", 100)}, startParameter:"iwantittoo");
         NextState = "/start";
     }
 
