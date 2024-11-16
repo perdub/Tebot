@@ -1,6 +1,9 @@
-namespace Tebot;
+namespace Tebot
+{
 
-public enum InvokeMode{
-    Sync,
-    Async
+    public enum InvokeMode
+    {
+        Sync,
+        Async
+    }
 }
