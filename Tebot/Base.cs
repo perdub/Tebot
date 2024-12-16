@@ -17,6 +17,8 @@ namespace Tebot
         public ITelegramBotClient Bot { get; internal set; }
         public long UserId { get; internal set; }
 
+        internal Tebot Tebot {get; set;}
+
         public string Text
         {
             get
@@ -36,6 +38,18 @@ namespace Tebot
             internal set
             {
                 _isLoaded = value;
+            }
+        }
+
+        public User BotInfo{
+            get{
+                return Tebot.BotInfo;
+            }
+        }
+
+        public string BotUsername{
+            get{
+                return BotInfo.Username;
             }
         }
 

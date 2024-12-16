@@ -29,6 +29,7 @@ namespace Tebot
 
         private Dictionary<string, MethodInfo> _implementations;
         private Dictionary<string, MethodInfo> _commands;
+        private List<BotCommand> _botCommands = new List<BotCommand>();
         private Dictionary<long, Base> _userStates = new Dictionary<long, Base>();
 
         private string _startState;
@@ -48,6 +49,20 @@ namespace Tebot
             }
         }
 
+        private string _token = string.Empty;
+        internal string Token{
+            get{
+                return _token;
+            }
+        }
+
+        private User _thisBot = null;
+        public User BotInfo{
+            get{
+                return _thisBot;
+            }
+        }
+
         public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
         {
             if (!stateImplementation.IsClass)
@@ -64,9 +79,15 @@ namespace Tebot
                 _logger = serviceProvider.GetService<ILogger<Tebot>>();
             }
 
+            _token = token;
+
             _implementations = new Dictionary<string, MethodInfo>();
             _commands = new Dictionary<string, MethodInfo>();
             _client = new TelegramBotClient(token, httpClient);
+
+            var botInfo = _client.GetMe();
+            botInfo.Wait();
+            _thisBot = botInfo.Result;
 
             _serviceProvider = serviceProvider;
             _startState = startState;
@@ -75,6 +96,9 @@ namespace Tebot
 
             parseMethods(stateImplementation);
             findConstructor(stateImplementation);
+
+            var commandTask = setMyCommands();
+            commandTask.Wait();
         }
 
         private InvokeMode getInvokeAttributeValue(MethodInfo methodInfo)
@@ -122,7 +146,15 @@ namespace Tebot
                     {
                         throw new NullReferenceException("Command name can`t be null or empty.");
                     }
+
                     _commands.Add(comm.Command, method);
+                    if(!string.IsNullOrWhiteSpace(comm.Description)){
+                        _botCommands.Add(new BotCommand{
+                            Command = comm.Command,
+                            Description = comm.Description
+                        });
+                    }
+
                     _logger?.LogDebug("New command method: {} {}", method, comm.Command);
                 }
             }
@@ -196,6 +228,12 @@ namespace Tebot
             await MessagesProcess(update);
         }
 
+        /// <summary>
+        /// метод который пытается получить id юзера/чата с которым связанно обновление
+        /// </summary>
+        /// <param name="update"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         private long tryToParseId(Update update)
         {
             if (update.Message != null)
@@ -231,15 +269,28 @@ namespace Tebot
             {
                 return update.EditedMessage.Chat.Id;
             }
+            if(update.ChosenInlineResult != null){
+                return update.ChosenInlineResult.From.Id;
+            }
+
+            if(update.RemovedChatBoost != null){
+                return update.RemovedChatBoost.Chat.Id;
+            }
             //add more in future
 
             throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
         }
 
+        /// <summary>
+        /// call for every Update
+        /// </summary>
+        /// <param name="update"></param>
+        /// <returns></returns>
         private async Task MessagesProcess(Update update)
         {
             try
-            {
+            {   
+                //пытаемся найти id и связанный инстанс
                 var id = tryToParseId(update);
                 Base handler;
                 bool isExsist = _userStates.TryGetValue(id, out handler);
@@ -261,14 +312,19 @@ namespace Tebot
 
                 //add some shit
                 handler.Update = update;
+                handler.Tebot = this;
 
+                //вызываем методы инстанса
                 try
                 {
+                    //OnUpdate
                     await handler.OnUpdate(update);
 
+                    //работа с командами
                     if (update.Message?.Text != null && update.Message.Text.StartsWith("/"))
                     {
                         var actualCommand = update.Message.Text.Split(' ').FirstOrDefault();
+                        //попытка спарсить команду
                         if (actualCommand != null)
                         {
 #if NETSTANDARD2_0
@@ -298,12 +354,14 @@ namespace Tebot
                         await handler.OnCommand(update.Message.Text);
                     }
 
+                    //для каллбеков
                     if (update.Type == Telegram.Bot.Types.Enums.UpdateType.CallbackQuery)
                     {
                         await handler.OnCallback(update.CallbackQuery);
                         return;
                     }
 
+                    //для инлайн-запросов
                     if (update.Type == Telegram.Bot.Types.Enums.UpdateType.InlineQuery)
                     {
                         await handler.OnInlineQuery(update.InlineQuery);
@@ -328,6 +386,7 @@ namespace Tebot
                 catch (Exception e)
                 {
                     await handler.OnException(e);
+                    
                 }
             }
             catch (Exception e)
@@ -404,10 +463,10 @@ namespace Tebot
 
         private void linkLoadUsers()
         {
-            _logger.LogDebug("Start add loaded users...");
+            safeNullableLogDebug("Start add loaded users...");
             if (_stateLoader.Strategy == LoaderStrategy.None)
             {
-                _logger.LogDebug("LoaderStrategy is None, skip...");
+                safeNullableLogDebug("LoaderStrategy is None, skip...");
                 return;
             }
             var loaded = _stateLoader.asTuptes();
@@ -418,8 +477,14 @@ namespace Tebot
                 state.Item2.Bot = _client;
                 _userStates.Add(state.Item1, state.Item2);
             }
-            _logger.LogInformation($"Load {i} client states.");
-            _logger.LogDebug("Add all loaded states in dictionary.");
+            safeNullableLogInfo($"Load {i} client states.");
+            safeNullableLogDebug("Add all loaded states in dictionary.");
+        }
+
+        private async Task setMyCommands(){
+            await Client.SetMyCommands(
+                _botCommands, new BotCommandScopeDefault()
+            );
         }
 
         private async Task run(CancellationToken cancellationToken)
@@ -459,6 +524,17 @@ namespace Tebot
         public IEnumerable<Base> IterateOverClients()
         {
             return _userStates.Select(a => a.Value);
+        }
+
+        private void safeNullableLogDebug(string debug){
+            if(_logger != null){
+                _logger.LogDebug(debug);
+            }
+        }
+        private void safeNullableLogInfo(string info){
+            if(_logger != null){
+                _logger.LogInformation(info);
+            }
         }
     }
 }

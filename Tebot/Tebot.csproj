@@ -13,6 +13,9 @@
   <PropertyGroup Condition=" '$(TargetFramework)' != 'netstandard2.0' ">
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
@@ -27,7 +30,7 @@
 
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
 
-    <PackageReference Include="Telegram.Bot" Version="22.0.2" />
+    <PackageReference Include="Telegram.Bot" Version="22.2.0" />
   </ItemGroup>
 
 </Project>
