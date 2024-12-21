@@ -89,6 +89,8 @@ namespace Tebot
             botInfo.Wait();
             _thisBot = botInfo.Result;
 
+            _logger.LogInformation($"Tebot instanse starter:\n\tBot: @{_thisBot.Username} - {_thisBot.Id} - https://t.me/{_thisBot.Username}");
+
             _serviceProvider = serviceProvider;
             _startState = startState;
             _stateLoader = stateLoader;
