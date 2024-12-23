@@ -326,9 +326,15 @@ namespace Tebot
                     if (update.Message?.Text != null && update.Message.Text.StartsWith("/"))
                     {
                         var actualCommand = update.Message.Text.Split(' ').FirstOrDefault();
+
+
                         //попытка спарсить команду
                         if (actualCommand != null)
                         {
+                            //если мы в групповом чате, команды могут быть отправленны как /split@MySuperBot, так что при нахождении вконце команды юзернейма текущего бота, отбрасываем его
+                            if(actualCommand.EndsWith('@' + BotInfo.Username)){
+                                actualCommand = actualCommand.Replace('@'+BotInfo.Username, "");
+                            }
 #if NETSTANDARD2_0
                             MethodInfo commandMethod;
 #else
