@@ -9,9 +9,10 @@ public class States : Base{
     [StateId(State = "/start")]
     public async Task HelloWord(){
         var k = new InlineKeyboardMarkup().AddButton("Случайное число...", "a");
-        await Bot.SendTextMessageAsync(UserId, "ЖМИ! ЖМИ! ЖМИ!", replyMarkup:k);
+        //await Task.Delay(350);
+        await Bot.SendTextMessageAsync(UserId, $"ЖМИ! ЖМИ! ЖМИ!\n\n{Update.Id} ", replyMarkup:k);
         await Bot.SendInvoiceAsync(UserId, "заголовок", "на презервативы.", Random.Shared.NextInt64().ToString(),  "XTR", new LabeledPrice[]{new LabeledPrice("label", 100)}, startParameter:"iwantittoo");
-        NextState = "/start";
+        
     }
 
     public override async Task OnCallback(CallbackQuery callbackQuery)

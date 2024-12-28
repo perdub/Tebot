@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.Net.Http;
 using System.Linq;
+using System.Collections.Concurrent;
 
 namespace Tebot
 {
@@ -63,6 +64,15 @@ namespace Tebot
             }
         }
 
+        private Thread updateReciverThread;
+        private AutoResetEvent stopListenEvent = new AutoResetEvent(false);
+        private ConcurrentDictionary<long, ConcurrentQueue<Update>> _updateQueue = new ConcurrentDictionary<long, ConcurrentQueue<Update>>();
+#if NETSTANDARD2_0
+            private ConcurrentDictionary<long, Task> _updateQueueTasks = new ConcurrentDictionary<long, Task>();
+#else
+        private ConcurrentDictionary<long, Task?> _updateQueueTasks = new ConcurrentDictionary<long, Task?>();
+#endif
+
         public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
         {
             if (!stateImplementation.IsClass)
@@ -101,6 +111,100 @@ namespace Tebot
 
             var commandTask = setMyCommands();
             commandTask.Wait();
+        }
+
+        private async Task getUpdates(object obj)
+        {
+            int offset = 0;
+            while(!stopListenEvent.WaitOne(30)){
+                var updates = await _client.GetUpdates(offset);
+                #if DEBUG
+                safeNullableLogDebug($"recive {updates.Length} updates...");
+                #endif
+                for(int i = 0; i<updates.Length; i++){
+                    offset = updates[i].Id + 1;
+
+                    Update u = updates[i];
+                    long id=tryToParseId(updates[i]);
+
+                    #if DEBUG
+                    safeNullableLogDebug($"update from {id}, update id: {u.Id}");
+                    #endif
+                    
+                    //добавляем новый апдейт от сервера в очередь. очередь отдельная для каждого пользователя.
+                    _updateQueue.AddOrUpdate(
+                        id,
+                        (_) => {
+                            #if DEBUG
+                            safeNullableLogDebug($"new ConcurrentQueue<Update> create to {id}");
+                            #endif
+                            var q =  new ConcurrentQueue<Update>();
+                            q.Enqueue(u);
+                            return q;
+                        },
+                        (_, queue) => {
+                            #if DEBUG
+                            safeNullableLogDebug($"add element ConcurrentQueue<Update>, owner queue id {id}");
+                            #endif
+                            queue.Enqueue(u);
+                            return queue;
+                        }
+                    );
+
+                    #if NETSTANDARD2_0
+                    Task task;
+                    #else
+                    Task? task;
+                    #endif
+                    bool isSuss = _updateQueueTasks.TryGetValue(id,out task);
+                    if(isSuss && task.Status != TaskStatus.RanToCompletion && task.Status != TaskStatus.Canceled && task.Status != TaskStatus.Faulted){
+                        //задание существует и активно, пропускаем
+                        #if DEBUG
+                        safeNullableLogDebug($"{id} - {u.Id} - exsist active running task, skip...");
+                        #endif
+                        continue;
+                    }
+                    else{
+                        //создаем новый таск
+                        #if DEBUG
+                        safeNullableLogDebug($"create ProcessUpdates task to {id}");
+                        #endif
+                        var newTask = Task.Factory.StartNew(
+                            async ()=>{await ProcessUpdates(id);},
+                            TaskCreationOptions.LongRunning
+                        );
+                        _updateQueueTasks.AddOrUpdate(id, newTask, (_, _a)=>{return newTask;});
+                    }
+                }
+            }
+        }
+
+        private async Task ProcessUpdates(long id){
+            ConcurrentQueue<Update> userUpdateQueue;
+            bool isSussesful = _updateQueue.TryGetValue(id, out userUpdateQueue);
+            if(isSussesful){
+                Update update;
+                while(userUpdateQueue.TryDequeue(out update)){
+                    #if DEBUG
+                    safeNullableLogDebug($"extract new Update with id: {update.Id} from queue which belongs to {id}");
+                    #endif
+                    await MessagesProcess(update);
+                    #if DEBUG
+                    safeNullableLogDebug($"update {update.Id} finish processing!");
+                    #endif
+                }
+                #if DEBUG
+                    safeNullableLogDebug($"empry queue which belongs to {id}");
+                #endif
+            }
+            #if DEBUG
+            else{
+                    safeNullableLogDebug($"ProcessUpdates task to {id} extract nothing.");
+            }
+            #endif
+            #if DEBUG
+            safeNullableLogDebug($"ProcessUpdates task to {id} finished.");
+            #endif
         }
 
         private InvokeMode getInvokeAttributeValue(MethodInfo methodInfo)
@@ -489,6 +593,8 @@ namespace Tebot
             safeNullableLogDebug("Add all loaded states in dictionary.");
         }
 
+
+
         private async Task setMyCommands(){
             await Client.SetMyCommands(
                 _botCommands, new BotCommandScopeDefault()
@@ -498,12 +604,22 @@ namespace Tebot
         private async Task run(CancellationToken cancellationToken)
         {
             linkLoadUsers();
-            _client.ReceiveAsync(this, cancellationToken: cancellationToken);
+            //_client.ReceiveAsync(this, cancellationToken: cancellationToken);
+/*
+            updateReciverThread = new Thread(new ParameterizedThreadStart(getUpdates));
+            updateReciverThread.Name = "Tebot Update Reciver";
+            updateReciverThread.Start();*/
+
+            Task.Factory.StartNew(
+                async ()=>{await getUpdates(0);},
+                TaskCreationOptions.LongRunning
+            );
         }
         public async Task Stop()
         {
             _logger?.LogDebug("Tebot is stopping");
             //try to stop
+            this.stopListenEvent.Set();
             botStopToken.Cancel();
             _client = null;
             _implementations = null;
