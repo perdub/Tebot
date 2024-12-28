@@ -5,11 +5,11 @@
 
 This is a small wrapper library for Telegram.Bot. With it, you can simplify the creation of complex bot logic. In `TebotConsole` you can find a example small console app.
 
-### Why?   
+## Why?   
 When you try to make telegram bot on Telegram.Bot, you usually have one big method like `OnUpdate(Update update, ...)` which process every update. And in this method you usually have a lot of if/else, switch and other shit. With this, you method easy can grow up to many lines of code.\n\n
 But with this libary we can represent user as class instance, and all updates and actions from concrete user will be applyed only to class instance
 
-### Base usage
+## Base usage
 For first, you should create you own class, which derivites from `Tebot.Base`, for example
 ```
 public class Bot : Base{
@@ -59,3 +59,33 @@ static void Main(string[] args)
     }
 ```
 Where first argument is bot token, second - `Type` to our class, and third - don`t thing about it now.
+
+## Going deeper
+### Dependency Injection
+Library support dependency injection. To this, pass `IServiceProvider` in `Tebot` constructor. If not set, class will try to create objects by himself, pass to his constructors null value.
+
+### Host
+It\`s recommend to use `Microsoft.Extensions.Hosting` to create application. Example you can find ![at here](https://github.com/perdub/Tebot/blob/main/TebotAsHost/Program.cs)
+
+### Commands
+Telegram Bots have commands concept, and this library support it. Commands is very simular to states:
+```
+[Command("/value")]
+public async Task Bebrachka(int abb = 150){
+    await Bot.SendTextMessageAsync(UserId, $"value x{abb}");
+}
+```
+Command methods can have parameters, which will be set from command. For example, if we send to bot `/value 200`, then `abb` value will be a 200. If we send only `/value`, `abb` will be equal to default value. Now lib can parce only `System.Int32`, `System.Int64`, `System.Double` and `System.String`.
+
+### Override methods
+`Base` class have some methods, which we can override in our class.
+| Method      | Method Description |
+| ----------- | ----------- |
+| `OnLoad()` | Event, when class instance was loaded |
+| `OnInlineQuery()` | When update represents `InlineQuery` |
+| `OnCallback()` | When user click on inline button with callback |
+| `OnCreate()` | Call once after create this `Base` instanse by library. |
+| `OnCommand()` | Call if user input is command(starts from `/` |
+| `OnUpdate()` | Call after each update with this user |
+| `ProccessUnknownState()` | Called when `NextState` value can\`t be matched with state |
+| `OnException()` | If in state we have unhandled exception, library call this method |
