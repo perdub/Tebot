@@ -66,7 +66,7 @@ namespace Tebot
 
         private Thread updateReciverThread;
         private AutoResetEvent stopListenEvent = new AutoResetEvent(false);
-        private ConcurrentDictionary<long, ConcurrentQueue<Update>> _updateQueue = new ConcurrentDictionary<long, ConcurrentQueue<Update>>();
+        private ConcurrentDictionary<long, BlockingCollection<Update>> _updateQueue = new ConcurrentDictionary<long, BlockingCollection<Update>>();
 #if NETSTANDARD2_0
             private ConcurrentDictionary<long, Task> _updateQueueTasks = new ConcurrentDictionary<long, Task>();
 #else
@@ -117,7 +117,7 @@ namespace Tebot
         {
             int offset = 0;
             while(!stopListenEvent.WaitOne(30)){
-                var updates = await _client.GetUpdates(offset);
+                var updates = await _client.GetUpdates(offset, timeout: 10);
                 #if DEBUG
                 safeNullableLogDebug($"recive {updates.Length} updates...");
                 #endif
@@ -138,15 +138,15 @@ namespace Tebot
                             #if DEBUG
                             safeNullableLogDebug($"new ConcurrentQueue<Update> create to {id}");
                             #endif
-                            var q =  new ConcurrentQueue<Update>();
-                            q.Enqueue(u);
+                            var q =  new BlockingCollection<Update>();
+                            q.Add(u);
                             return q;
                         },
                         (_, queue) => {
                             #if DEBUG
                             safeNullableLogDebug($"add element ConcurrentQueue<Update>, owner queue id {id}");
                             #endif
-                            queue.Enqueue(u);
+                            queue.Add(u);
                             return queue;
                         }
                     );
@@ -170,8 +170,7 @@ namespace Tebot
                         safeNullableLogDebug($"create ProcessUpdates task to {id}");
                         #endif
                         var newTask = Task.Factory.StartNew(
-                            async ()=>{await ProcessUpdates(id);},
-                            TaskCreationOptions.LongRunning
+                            async ()=>{await ProcessUpdates(id);}
                         );
                         _updateQueueTasks.AddOrUpdate(id, newTask, (_, _a)=>{return newTask;});
                     }
@@ -180,11 +179,11 @@ namespace Tebot
         }
 
         private async Task ProcessUpdates(long id){
-            ConcurrentQueue<Update> userUpdateQueue;
-            bool isSussesful = _updateQueue.TryGetValue(id, out userUpdateQueue);
+            BlockingCollection<Update> coll;
+            bool isSussesful = _updateQueue.TryGetValue(id, out coll);
             if(isSussesful){
                 Update update;
-                while(userUpdateQueue.TryDequeue(out update)){
+                while(coll.TryTake(out update)){
                     #if DEBUG
                     safeNullableLogDebug($"extract new Update with id: {update.Id} from queue which belongs to {id}");
                     #endif
@@ -199,7 +198,7 @@ namespace Tebot
             }
             #if DEBUG
             else{
-                    safeNullableLogDebug($"ProcessUpdates task to {id} extract nothing.");
+                safeNullableLogDebug($"ProcessUpdates task to {id} extract nothing.");
             }
             #endif
             #if DEBUG
