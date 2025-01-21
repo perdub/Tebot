@@ -1,3 +1,8 @@
 {
-    "token": "6510000000:AAGCKkSY***"
+    "Logging": {
+        "LogLevel" : {
+            "Default" : "Debug"
+        }
+    },
+    "token": "6510109654:AAGCKkSYDlyS6GVU-Y4UFZu3oWAw8rgGNLI"
 }
