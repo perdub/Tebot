@@ -451,13 +451,17 @@ namespace Tebot
                                 if (map.Item1)
                                 {
                                     var res = commandMethod.Invoke(handler, map.Item2);
-                                    if (inv == InvokeMode.Sync && res is Task tsk && tsk != null)
+                                    if (res is Task tsk && tsk != null)
                                     {
-                                        #if NETSTANDARD2_0
-                                        tsk.Wait();
-                                        #else
-                                        await tsk.WaitAsync(CancellationToken.None);
-                                        #endif
+                                        //добавим задачу для проверки того как завершается задача
+                                        tsk.ContinueWith(a=>CheckTaskForFall(a));
+                                        if(inv == InvokeMode.Sync){
+                                            #if NETSTANDARD2_0
+                                            tsk.Wait();
+                                            #else
+                                            await tsk.WaitAsync(CancellationToken.None);
+                                            #endif
+                                        }
                                     }
                                 }
                             }
@@ -488,9 +492,12 @@ namespace Tebot
                     }
                     var invk = getInvokeAttributeValue(method);
                     var rslt = method.Invoke(handler, null);
-                    if (invk == InvokeMode.Sync && rslt is Task tsk1 && tsk1 != null)
+                    if (rslt is Task tsk1 && tsk1 != null)
                     {
-                        tsk1.Wait();
+                        tsk1.ContinueWith(a=>CheckTaskForFall(a));
+                        if(invk == InvokeMode.Sync){
+                            tsk1.Wait();
+                        }
                     }
 
                 }
@@ -503,6 +510,13 @@ namespace Tebot
             catch (Exception e)
             {
                 Console.WriteLine($"exception: {e.Message} {e.InnerException} {e.StackTrace}");
+            }
+        }
+
+        private void CheckTaskForFall(Task task){
+            if(task.IsFaulted){
+                var exception = task.Exception;
+                this._logger.LogError(exception, "Error when invoke task:");
             }
         }
 
