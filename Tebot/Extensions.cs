@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.Bot.Types;
 
 public static class Extensions
 {
@@ -82,5 +83,9 @@ public static class Extensions
     }
     public static Task<Stream> DownloadItemFromUpdate(this Base @base){
         return @base.DownloadItemFromUpdate(new HttpClient());
+    }
+
+    public static bool IsMediaMessage(this Update update){
+        return (update.Message != null) && (update.Message.Photo != null || update.Message.Video != null || update.Message.Document != null || update.Message.Sticker != null);
     }
 }
