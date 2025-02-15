@@ -451,7 +451,7 @@ namespace Tebot
                                 if (map.Item1)
                                 {
                                     var res = commandMethod.Invoke(handler, map.Item2);
-                                    if (inv == InvokeMode.Sync && res is Task tsk)
+                                    if (inv == InvokeMode.Sync && res is Task tsk && tsk != null)
                                     {
                                         #if NETSTANDARD2_0
                                         tsk.Wait();
@@ -488,7 +488,7 @@ namespace Tebot
                     }
                     var invk = getInvokeAttributeValue(method);
                     var rslt = method.Invoke(handler, null);
-                    if (invk == InvokeMode.Sync && rslt is Task tsk1)
+                    if (invk == InvokeMode.Sync && rslt is Task tsk1 && tsk1 != null)
                     {
                         tsk1.Wait();
                     }
