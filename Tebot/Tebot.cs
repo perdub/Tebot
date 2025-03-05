@@ -513,6 +513,16 @@ namespace Tebot
             }
         }
 
+        public Base GetRepresentationById(long id = -1)
+        {
+            bool isExsist = this._userStates.TryGetValue(id, out Base b);
+            if (isExsist)
+            {
+                return b;
+            }
+            return null;
+        }
+
         private void CheckTaskForFall(Task task){
             if(task.IsFaulted){
                 var exception = task.Exception;
