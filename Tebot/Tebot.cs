@@ -469,10 +469,10 @@ namespace Tebot
                                             await tsk.WaitAsync(CancellationToken.None);
                                             #endif
 
-                                            //если команда помечена аттрибутом бреак мы выходим для того что бы не передать выполнение в стейт
-                                            if(behaviour == BehaviourAfterCommand.Break){
-                                                return;
-                                            }
+                                        }
+                                        //если команда помечена аттрибутом бреак мы выходим для того что бы не передать выполнение в стейт
+                                        if(behaviour == BehaviourAfterCommand.Break){
+                                            return;
                                         }
                                     }
                                 }
