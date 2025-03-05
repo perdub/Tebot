@@ -17,7 +17,17 @@ namespace Tebot
         public ITelegramBotClient Bot { get; internal set; }
         public long UserId { get; internal set; }
 
-        internal Tebot Tebot {get; set;}
+        public Tebot Tebot {get; internal set;}
+
+        /// <summary>
+        /// method which allows to get other Base class instance
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public Base GetOtherInstance(long id)
+        {
+            return Tebot.GetRepresentationById(id);
+        }
 
         public string Text
         {
