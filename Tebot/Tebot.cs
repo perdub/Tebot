@@ -206,6 +206,10 @@ namespace Tebot
             #endif
         }
 
+        private BehaviourAfterCommand GetBehaviour(MethodInfo methodInfo){
+            var comm = methodInfo.GetCustomAttribute<CommandAttribute>();
+            return comm.Behaviour;
+        }
         private InvokeMode getInvokeAttributeValue(MethodInfo methodInfo)
         {
             var comm = methodInfo.GetCustomAttribute<CommandAttribute>();
@@ -446,7 +450,10 @@ namespace Tebot
                             bool isSuss = _commands.TryGetValue(actualCommand, out commandMethod);
                             if (isSuss && commandMethod != null)
                             {
+                                //todo: optimize this
                                 var inv = getInvokeAttributeValue(commandMethod);
+                                var behaviour = GetBehaviour(commandMethod);
+
                                 var map = mapParams(commandMethod, update.Message.Text);
                                 if (map.Item1)
                                 {
@@ -454,13 +461,18 @@ namespace Tebot
                                     if (res is Task tsk && tsk != null)
                                     {
                                         //добавим задачу для проверки того как завершается задача
-                                        tsk.ContinueWith(a=>CheckTaskForFall(a));
+                                        tsk = tsk.ContinueWith(a=>CheckTaskForFall(a));
                                         if(inv == InvokeMode.Sync){
                                             #if NETSTANDARD2_0
                                             tsk.Wait();
                                             #else
                                             await tsk.WaitAsync(CancellationToken.None);
                                             #endif
+
+                                            //если команда помечена аттрибутом бреак мы выходим для того что бы не передать выполнение в стейт
+                                            if(behaviour == BehaviourAfterCommand.Break){
+                                                return;
+                                            }
                                         }
                                     }
                                 }
