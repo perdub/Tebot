@@ -123,7 +123,7 @@ namespace Tebot
         /// </summary>
         /// <param name="values"></param>
         /// <returns></returns>
-        protected IReplyMarkup fastKeyboardBuilder(params string[] values)
+        protected ReplyMarkup  fastKeyboardBuilder(params string[] values)
         {
             var km = new ReplyKeyboardMarkup(true);
             foreach (var v in values)
@@ -137,7 +137,7 @@ namespace Tebot
         /// clear keyboard
         /// </summary>
         /// <returns></returns>
-        protected IReplyMarkup clearKeyboard()
+        protected ReplyMarkup  clearKeyboard()
         {
             return new ReplyKeyboardRemove();
         }

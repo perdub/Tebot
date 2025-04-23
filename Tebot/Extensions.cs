@@ -11,7 +11,7 @@ using Telegram.Bot.Types;
 
 public static class Extensions
 {
-    public static IReplyMarkup OneTimeKeyboard(this IReplyMarkup keyboard, bool isOneTime = true)
+    public static ReplyMarkup  OneTimeKeyboard(this ReplyMarkup  keyboard, bool isOneTime = true)
     {
         if (keyboard is ReplyKeyboardMarkup replyKeyboardMarkup)
         {
@@ -20,7 +20,7 @@ public static class Extensions
         }
         throw new Exception("Not ReplayKeyboardMarkup.");
     }
-    public static IReplyMarkup OneTimeKeyboard(this IReplyMarkup keyboard){
+    public static ReplyMarkup  OneTimeKeyboard(this ReplyMarkup  keyboard){
         return OneTimeKeyboard(keyboard, true);
     }
 
