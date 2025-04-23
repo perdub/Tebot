@@ -10,7 +10,7 @@ namespace Tebot{
         public static HostApplicationBuilder CreateBotApplication(string jsonConfigFile = "config.json", string[] commandLineArgs = null, System.Type stateImplementation = null, StateLoader stateLoader = null){
             var bld = Host.CreateApplicationBuilder();
 
-            bld.Configuration.AddJsonFile(jsonConfigFile);
+            bld.Configuration.AddJsonFile(jsonConfigFile, true);
             bld.Configuration.AddEnvironmentVariables();
 
             if(commandLineArgs!=null){
