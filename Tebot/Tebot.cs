@@ -117,7 +117,12 @@ namespace Tebot
         {
             int offset = 0;
             while(!stopListenEvent.WaitOne(30)){
+                #if NETSTANDARD2_0
+                Update[] updates = null;
+                #else
                 Update[]? updates = null;
+                #endif
+
                 try{
                     updates = await _client.GetUpdates(offset, timeout: 40);
                 }
