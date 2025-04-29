@@ -117,7 +117,19 @@ namespace Tebot
         {
             int offset = 0;
             while(!stopListenEvent.WaitOne(30)){
-                var updates = await _client.GetUpdates(offset, timeout: 10);
+                Update[]? updates = null;
+                try{
+                    updates = await _client.GetUpdates(offset, timeout: 40);
+                }
+                catch(Exception e){
+                    _logger?.LogError("Fall to GetUpdates: {0}", e);
+                }
+                finally{
+                }
+                if(updates == null){
+                    continue;
+                }
+                
                 #if DEBUG
                 safeNullableLogDebug($"recive {updates.Length} updates...");
                 #endif
