@@ -12,6 +12,7 @@ using System.Threading;
 using System.Net.Http;
 using System.Linq;
 using System.Collections.Concurrent;
+using Telegram.Bot.Types.Enums;
 
 namespace Tebot
 {
@@ -113,6 +114,13 @@ namespace Tebot
             commandTask.Wait();
         }
 
+
+        private static UpdateType[] AllowedUpdates = new UpdateType[]{
+            UpdateType.Unknown, UpdateType.Message, UpdateType.InlineQuery, UpdateType.ChosenInlineResult, UpdateType.CallbackQuery, UpdateType.EditedMessage, UpdateType.ChannelPost,
+            UpdateType.EditedChannelPost, UpdateType.ShippingQuery, UpdateType.PreCheckoutQuery, UpdateType.Poll, UpdateType.PollAnswer, UpdateType.MyChatMember, UpdateType.ChatMember,
+            UpdateType.ChatJoinRequest, UpdateType.MessageReaction, UpdateType.MessageReactionCount, UpdateType.ChatBoost, UpdateType.RemovedChatBoost, UpdateType.BusinessConnection,
+            UpdateType.BusinessMessage, UpdateType.EditedBusinessMessage, UpdateType.DeletedBusinessMessages, UpdateType.PurchasedPaidMedia
+        };
         private async Task getUpdates(object obj)
         {
             int offset = 0;
@@ -124,7 +132,7 @@ namespace Tebot
                 #endif
 
                 try{
-                    updates = await _client.GetUpdates(offset, timeout: 40);
+                    updates = await _client.GetUpdates(offset, timeout: 40, allowedUpdates: AllowedUpdates);
                 }
                 catch(Exception e){
                     _logger?.LogError("Fall to GetUpdates: {0}", e);
