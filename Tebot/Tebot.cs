@@ -414,6 +414,12 @@ namespace Tebot
             if(update.ChatMember != null){
                 return update.ChatMember.Chat.Id;
             }
+            if(update.MessageReactionCount != null){
+                return update.MessageReactionCount.Chat.Id;
+            }
+            if(update.MessageReaction != null){
+                return update.MessageReaction.Chat.Id;
+            }
             //add more in future
 
             throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
