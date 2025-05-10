@@ -410,6 +410,10 @@ namespace Tebot
             if(update.RemovedChatBoost != null){
                 return update.RemovedChatBoost.Chat.Id;
             }
+
+            if(update.ChatMember != null){
+                return update.ChatMember.Chat.Id;
+            }
             //add more in future
 
             throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
