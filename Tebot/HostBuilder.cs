@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Tebot{
     public static class TebotHostBuilder{
-        public static HostApplicationBuilder CreateBotApplication(string jsonConfigFile = "config.json", string[] commandLineArgs = null, System.Type stateImplementation = null, StateLoader stateLoader = null){
+        public static HostApplicationBuilder CreateBotApplication(string jsonConfigFile = "config.json", string[] commandLineArgs = null, string localApiUrl = null, System.Type stateImplementation = null, StateLoader stateLoader = null){
             var bld = Host.CreateApplicationBuilder();
 
             bld.Configuration.AddJsonFile(jsonConfigFile, true);
@@ -53,7 +53,7 @@ namespace Tebot{
                 if(loader == null){
                     loader = StateLoader.Empty();
                 }
-                return new Tebot(bld.Configuration.GetValue<string>("token"), finalType, loader, serviceProvider: provider);
+            return new Tebot(bld.Configuration.GetValue<string>("token"), finalType, loader, localApiUrl: localApiUrl, serviceProvider: provider);
             });
 
             return bld;

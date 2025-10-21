@@ -74,7 +74,7 @@ namespace Tebot
         private ConcurrentDictionary<long, Task?> _updateQueueTasks = new ConcurrentDictionary<long, Task?>();
 #endif
 
-        public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
+        public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string localApiUrl = null, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
         {
             if (!stateImplementation.IsClass)
             {
@@ -94,7 +94,12 @@ namespace Tebot
 
             _implementations = new Dictionary<string, MethodInfo>();
             _commands = new Dictionary<string, MethodInfo>();
-            _client = new TelegramBotClient(token, httpClient);
+            if (!string.IsNullOrEmpty(localApiUrl))
+            {
+                _logger.LogInformation("Instead connecting to api.telegram.org, we will be made request to local bot api server based on {0}", localApiUrl);
+            }
+            TelegramBotClientOptions telegramBotClientOptions = new TelegramBotClientOptions(token, localApiUrl);
+            _client = new TelegramBotClient(telegramBotClientOptions, httpClient);
 
             var botInfo = _client.GetMe();
             botInfo.Wait();
