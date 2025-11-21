@@ -148,6 +148,7 @@ namespace Tebot
                     continue;
                 }
                 
+try{
                 #if DEBUG
                 safeNullableLogDebug($"recive {updates.Length} updates...");
                 #endif
@@ -205,6 +206,11 @@ namespace Tebot
                         _updateQueueTasks.AddOrUpdate(id, newTask, (_, _a)=>{return newTask;});
                     }
                 }
+}
+catch(Exception e)
+{
+safeNullableLogDebug($"Exception while processes update! {e.ToString()}");
+}
             }
         }
 
