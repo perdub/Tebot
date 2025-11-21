@@ -148,7 +148,7 @@ namespace Tebot
                     continue;
                 }
                 
-try{
+
                 #if DEBUG
                 safeNullableLogDebug($"recive {updates.Length} updates...");
                 #endif
@@ -156,6 +156,7 @@ try{
                     offset = updates[i].Id + 1;
 
                     Update u = updates[i];
+                    try{
                     long id=tryToParseId(updates[i]);
 
                     #if DEBUG
@@ -205,12 +206,13 @@ try{
                         );
                         _updateQueueTasks.AddOrUpdate(id, newTask, (_, _a)=>{return newTask;});
                     }
-                }
-}
+                    }
 catch(Exception e)
 {
 safeNullableLogDebug($"Exception while processes update! {e.ToString()}");
 }
+                }
+
             }
         }
 
