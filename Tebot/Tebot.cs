@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Linq;
 using System.Collections.Concurrent;
 using Telegram.Bot.Types.Enums;
+using System.Threading.Channels;
 
 namespace Tebot
 {
@@ -65,14 +66,9 @@ namespace Tebot
             }
         }
 
-        private Thread updateReciverThread;
+        private Channel<Update> updateChannel;
+
         private AutoResetEvent stopListenEvent = new AutoResetEvent(false);
-        private ConcurrentDictionary<long, BlockingCollection<Update>> _updateQueue = new ConcurrentDictionary<long, BlockingCollection<Update>>();
-#if NETSTANDARD2_0
-            private ConcurrentDictionary<long, Task> _updateQueueTasks = new ConcurrentDictionary<long, Task>();
-#else
-        private ConcurrentDictionary<long, Task?> _updateQueueTasks = new ConcurrentDictionary<long, Task?>();
-#endif
 
         public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string localApiUrl = null, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
         {
@@ -105,6 +101,12 @@ namespace Tebot
             botInfo.Wait();
             _thisBot = botInfo.Result;
 
+            updateChannel = Channel.CreateBounded<Update>(
+                new BoundedChannelOptions(1) 
+                    { SingleReader = true, Capacity = 16*1024,FullMode=BoundedChannelFullMode.DropOldest },
+                (update) => { this._logger.LogWarning("Update was dropped from channel. Update id: {0}", update.Id); }
+            );
+
             _logger.LogInformation($"Tebot instanse starter:\n\tBot: @{_thisBot.Username} - {_thisBot.Id} - https://t.me/{_thisBot.Username}");
 
             _serviceProvider = serviceProvider;
@@ -130,11 +132,7 @@ namespace Tebot
         {
             int offset = 0;
             while(!stopListenEvent.WaitOne(30)){
-                #if NETSTANDARD2_0
-                Update[] updates = null;
-                #else
                 Update[]? updates = null;
-                #endif
 
                 try{
                     updates = await _client.GetUpdates(offset, timeout: 40, allowedUpdates: AllowedUpdates);
@@ -142,106 +140,24 @@ namespace Tebot
                 catch(Exception e){
                     _logger?.LogError("Fall to GetUpdates: {0}", e);
                 }
-                finally{
-                }
                 if(updates == null){
                     continue;
                 }
-                
 
-                #if DEBUG
-                safeNullableLogDebug($"recive {updates.Length} updates...");
-                #endif
-                for(int i = 0; i<updates.Length; i++){
-                    offset = updates[i].Id + 1;
-
-                    Update u = updates[i];
-                    try{
-                    long id=tryToParseId(updates[i]);
-
-                    #if DEBUG
-                    safeNullableLogDebug($"update from {id}, update id: {u.Id}");
-                    #endif
-                    
-                    //добавляем новый апдейт от сервера в очередь. очередь отдельная для каждого пользователя.
-                    _updateQueue.AddOrUpdate(
-                        id,
-                        (_) => {
-                            #if DEBUG
-                            safeNullableLogDebug($"new ConcurrentQueue<Update> create to {id}");
-                            #endif
-                            var q =  new BlockingCollection<Update>();
-                            q.Add(u);
-                            return q;
-                        },
-                        (_, queue) => {
-                            #if DEBUG
-                            safeNullableLogDebug($"add element ConcurrentQueue<Update>, owner queue id {id}");
-                            #endif
-                            queue.Add(u);
-                            return queue;
-                        }
-                    );
-
-                    #if NETSTANDARD2_0
-                    Task task;
-                    #else
-                    Task? task;
-                    #endif
-                    bool isSuss = _updateQueueTasks.TryGetValue(id,out task);
-                    if(isSuss && task.Status != TaskStatus.RanToCompletion && task.Status != TaskStatus.Canceled && task.Status != TaskStatus.Faulted){
-                        //задание существует и активно, пропускаем
-                        #if DEBUG
-                        safeNullableLogDebug($"{id} - {u.Id} - exsist active running task, skip...");
-                        #endif
-                        continue;
-                    }
-                    else{
-                        //создаем новый таск
-                        #if DEBUG
-                        safeNullableLogDebug($"create ProcessUpdates task to {id}");
-                        #endif
-                        var newTask = Task.Factory.StartNew(
-                            async ()=>{await ProcessUpdates(id);}
-                        );
-                        _updateQueueTasks.AddOrUpdate(id, newTask, (_, _a)=>{return newTask;});
-                    }
-                    }
-catch(Exception e)
-{
-safeNullableLogDebug($"Exception while processes update! {e.ToString()}");
-}
+                foreach (var upd in updates) {
+                    offset = upd.Id + 1;
+                    await updateChannel.Writer.WriteAsync(upd);              
                 }
 
+                
             }
         }
 
-        private async Task ProcessUpdates(long id){
-            BlockingCollection<Update> coll;
-            bool isSussesful = _updateQueue.TryGetValue(id, out coll);
-            if(isSussesful){
-                Update update;
-                while(coll.TryTake(out update)){
-                    #if DEBUG
-                    safeNullableLogDebug($"extract new Update with id: {update.Id} from queue which belongs to {id}");
-                    #endif
-                    await MessagesProcess(update);
-                    #if DEBUG
-                    safeNullableLogDebug($"update {update.Id} finish processing!");
-                    #endif
-                }
-                #if DEBUG
-                    safeNullableLogDebug($"empry queue which belongs to {id}");
-                #endif
+        private async Task ProcessUpdates(){
+            await foreach (var upd in updateChannel.Reader.ReadAllAsync())
+            {
+                await this.MessagesProcess(upd);              
             }
-            #if DEBUG
-            else{
-                safeNullableLogDebug($"ProcessUpdates task to {id} extract nothing.");
-            }
-            #endif
-            #if DEBUG
-            safeNullableLogDebug($"ProcessUpdates task to {id} finished.");
-            #endif
         }
 
         private BehaviourAfterCommand GetBehaviour(MethodInfo methodInfo){
@@ -601,13 +517,7 @@ safeNullableLogDebug($"Exception while processes update! {e.ToString()}");
             Console.WriteLine($"{exception.Message} {exception.Source} {exception.StackTrace} {exception.InnerException}");
         }
 
-        private
-#if NETSTANDARD2_0
-            (bool, object[])
-#else
-        (bool, object?[]?) 
-#endif
-            mapParams(MethodInfo method, string str)
+        private (bool, object?[]?) mapParams(MethodInfo method, string str)
         {
             var _params = method.GetParameters();
             var arr = str.Split(' ');
@@ -615,12 +525,7 @@ safeNullableLogDebug($"Exception while processes update! {e.ToString()}");
             {
                 _logger?.LogWarning($"{method.Name}() params count dosent match with count of parced params");
             }
-#if NETSTANDARD2_0
-            object[]
-#else
-            object?[]
-#endif
-                res = new object[_params.Length];
+            object?[] res = new object[_params.Length];
             for (int i = 0; i < _params.Length; i++)
             {
                 var param = _params[i];
@@ -695,6 +600,10 @@ safeNullableLogDebug($"Exception while processes update! {e.ToString()}");
 
             Task.Factory.StartNew(
                 async ()=>{await getUpdates(0);},
+                TaskCreationOptions.LongRunning
+            );
+            Task.Factory.StartNew(
+                async() => { await ProcessUpdates(); },
                 TaskCreationOptions.LongRunning
             );
         }

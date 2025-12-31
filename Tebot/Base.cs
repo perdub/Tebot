@@ -9,6 +9,11 @@ namespace Tebot
 
     public abstract class Base
     {
+        /// <summary>
+        /// явлв€етс€ ли чат каналом. Ќе каналом в привычном понимании, а каналом с точки зрени€ api(это может быть группа, канал, so on)
+        /// </summary>
+        public bool IsChannel => UserId < 0;
+
         //this two propertys are change after each call
         public string NextState { get; set; } = "/start";
         public Update Update { get; internal set; }
