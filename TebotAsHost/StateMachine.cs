@@ -37,3 +37,12 @@ public class States : Base{
         await Bot.SendMessage(UserId, $"БЕБРАЧКУ ПОНЮХАЙ x{abb}");
     }
 }
+
+public class States2 : Base
+{
+    [StateId("/start")]
+    public async Task Start()
+    {
+        await Bot.SendMessage(UserId, "cocи соси соси");
+    }
+}

@@ -18,17 +18,16 @@ using System.Threading.Channels;
 namespace Tebot
 {
 
-    public class Tebot : IDisposable, IUpdateHandler, IHostedService
+    public class Tebot : IDisposable, IUpdateHandler, IHostedService, IBaseSelector
     {
         private ITelegramBotClient _client;
 
-        private
-#if NETSTANDARD2_0
-            ILogger<Tebot>
-#else
-    ILogger<Tebot>? 
-#endif
-            _logger;
+        private ILogger<Tebot>? _logger;
+
+        /// <summary>
+        /// словарь который содержит префиксы для состояний. так же использвется для различия какие типы были пропаршены а какие нет.
+        /// </summary>
+        private Dictionary<Type, string> prefixes = new Dictionary<Type, string>();
 
         private Dictionary<string, MethodInfo> _implementations;
         private Dictionary<string, MethodInfo> _commands;
@@ -39,11 +38,10 @@ namespace Tebot
         private Type _stateImplementation;
         private IServiceProvider _serviceProvider;
 
-        private ConstructorInfo _preferedConstructor;
-        private ParameterInfo[] _preferedConstructorParams;
-
         private StateLoader _stateLoader;
 
+        private IBaseSelector baseSelector;
+        private Type baseSelectorDefaultType;
         public ITelegramBotClient Client
         {
             get
@@ -70,12 +68,16 @@ namespace Tebot
 
         private AutoResetEvent stopListenEvent = new AutoResetEvent(false);
 
+        public Tebot SetBaseSelector(IBaseSelector baseSelector)
+        {
+            this.baseSelector = baseSelector;
+            return this;
+        }
+
         public Tebot(string token, Type stateImplementation, StateLoader stateLoader, string localApiUrl = null, string startState = "/start", HttpClient httpClient = null, IServiceProvider serviceProvider = null)
         {
-            if (!stateImplementation.IsClass)
-            {
-                throw new ArgumentException("statesImplementations should be a class.");
-            }
+            baseSelector = this;
+            baseSelectorDefaultType = stateImplementation;
             if (string.IsNullOrEmpty(token))
             {
                 throw new NullReferenceException("token can`t be a null or empty");
@@ -113,9 +115,6 @@ namespace Tebot
             _startState = startState;
             _stateLoader = stateLoader;
             this._stateImplementation = stateImplementation;
-
-            parseMethods(stateImplementation);
-            findConstructor(stateImplementation);
 
             var commandTask = setMyCommands();
             commandTask.Wait();
@@ -183,6 +182,7 @@ namespace Tebot
         {
             //get all methods in type
             var methods = type.GetMethods();
+            string prefix = type.FullName;
             foreach (var method in methods)
             {
                 //get StateIdAttribute in each method
@@ -195,7 +195,7 @@ namespace Tebot
                     {
                         throw new NullReferenceException("State value can`t be null or empty.");
                     }
-                    _implementations.Add(state.State, method);
+                    _implementations.Add(prefix+state.State, method);
                     _logger?.LogDebug("New state method: {} {}", method, state.State);
                 }
 
@@ -210,7 +210,7 @@ namespace Tebot
                         throw new NullReferenceException("Command name can`t be null or empty.");
                     }
 
-                    _commands.Add(comm.Command, method);
+                    _commands.Add(prefix+comm.Command, method);
                     if(!string.IsNullOrWhiteSpace(comm.Description)){
                         _botCommands.Add(new BotCommand{
                             Command = comm.Command,
@@ -221,59 +221,20 @@ namespace Tebot
                     _logger?.LogDebug("New command method: {} {}", method, comm.Command);
                 }
             }
+            prefixes.Add(type, prefix);
         }
-
-        private void findConstructor(Type type)
-        {
-            var constructors = type.GetConstructors();
-            ParameterInfo[] parameters = Array.Empty<ParameterInfo>();
-            ConstructorInfo constructor = null;
-            foreach (var constr in constructors)
-            {
-                var loc = constr.GetParameters();
-                if (loc.Length > parameters.Length)
-                {
-                    constructor = constr;
-                    parameters = loc;
-                }
-            }
-
-            _preferedConstructor = constructor;
-            _preferedConstructorParams = parameters;
-        }
-        private Base CreateInstance()
+        private Base CreateInstance(long userId)
         {
             if (_serviceProvider != null)
             {
-                return (Base)ActivatorUtilities.CreateInstance(_serviceProvider, _stateImplementation);
-            }
-            return CreateBaseInstance();
-        }
-        private Base CreateBaseInstance()
-        {
-            #if NETSTANDARD2_0
-            object[]
-            #else
-            object?[]? 
-            #endif 
-            parameters = new object[_preferedConstructorParams.Length];
-            if (_serviceProvider != null)
-            {
-                for (int i = 0; i < _preferedConstructorParams.Length; i++)
+                var type = baseSelector.SelectType(userId);
+                if (!prefixes.ContainsKey(type))
                 {
-                    var param = _preferedConstructorParams[i];
-                    Type paramType = param.ParameterType;
-                    parameters[i] = _serviceProvider.GetRequiredService(paramType);
+                    parseMethods(type);
                 }
+                return (Base)ActivatorUtilities.CreateInstance(_serviceProvider, type);
             }
-            else
-            {
-                for (int i = 0; i < _preferedConstructorParams.Length; i++)
-                {
-                    parameters[i] = null;
-                }
-            }
-            return (Base)Activator.CreateInstance(_stateImplementation, parameters);
+            throw new NullReferenceException("ServiceProvider is null.");
         }
 
         public void Dispose()
@@ -371,7 +332,7 @@ namespace Tebot
                 if (!isExsist)
                 {
                     //create
-                    var instance = CreateInstance();
+                    var instance = CreateInstance(id);
                     if (instance == null)
                         throw new Exception("Something went wrong");
                     //cast and set values
@@ -390,6 +351,7 @@ namespace Tebot
                 //вызываем методы инстанса
                 try
                 {
+                    string prefix = this.prefixes[handler.GetType()];
                     //OnUpdate
                     await handler.OnUpdate(update);
 
@@ -406,12 +368,9 @@ namespace Tebot
                             if(actualCommand.EndsWith('@' + BotInfo.Username)){
                                 actualCommand = actualCommand.Replace('@'+BotInfo.Username, "");
                             }
-#if NETSTANDARD2_0
-                            MethodInfo commandMethod;
-#else
+
                         MethodInfo? commandMethod;
-#endif
-                            bool isSuss = _commands.TryGetValue(actualCommand, out commandMethod);
+                            bool isSuss = _commands.TryGetValue(prefix+actualCommand, out commandMethod);
                             if (isSuss && commandMethod != null)
                             {
                                 //todo: optimize this
@@ -460,7 +419,7 @@ namespace Tebot
                     }
 
                     //check and invoke
-                    var method = _implementations[handler.NextState];
+                    var method = _implementations[prefix+handler.NextState];
                     if (method == null)
                     {
                         await handler.ProccessUnknownState(handler.NextState);
@@ -651,6 +610,11 @@ namespace Tebot
             if(_logger != null){
                 _logger.LogInformation(info);
             }
+        }
+
+        public Type SelectType(long id)
+        {
+            return baseSelectorDefaultType;
         }
     }
 }

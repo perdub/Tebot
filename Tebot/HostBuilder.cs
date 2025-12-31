@@ -7,13 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Tebot{
     public static class TebotHostBuilder{
-        public static HostApplicationBuilder CreateBotApplication(string jsonConfigFile = "config.json", string[] commandLineArgs = null, string localApiUrl = null, System.Type stateImplementation = null, StateLoader stateLoader = null){
+        public static HostApplicationBuilder CreateBotApplication(string jsonConfigFile = "config.json", string[] commandLineArgs = null, string localApiUrl = null, System.Type stateImplementation = null, IBaseSelector baseSelector = null, StateLoader stateLoader = null) {
             var bld = Host.CreateApplicationBuilder();
 
             bld.Configuration.AddJsonFile(jsonConfigFile, true);
             bld.Configuration.AddEnvironmentVariables();
 
-            if(commandLineArgs!=null){
+            if (commandLineArgs != null) {
                 bld.Configuration.AddCommandLine(commandLineArgs);
             }
 
@@ -22,24 +22,24 @@ namespace Tebot{
             Type finalType = stateImplementation;
 
             //пытаемся найти имплементацию базового класса в вызывающей сборке и присвоить ее если явно не указанно. если найдено несколько, то выбрасывается исключение
-            if(stateImplementation == null){
+            if (stateImplementation == null && baseSelector == null) {
                 var assmbl = Assembly.GetCallingAssembly();
                 Type targetState = null;
-                foreach(var definedType in assmbl.DefinedTypes){
+                foreach (var definedType in assmbl.DefinedTypes) {
                     Type tmp = definedType.AsType();
-                    if(isTebotBaseDerived(tmp)){
-                        if(targetState == null){
+                    if (isTebotBaseDerived(tmp)) {
+                        if (targetState == null) {
                             targetState = tmp;
                         }
-                        else{
+                        else {
                             throw new Exception("More that one class, derived from Tebot.Base. Please, set you implementation clearly.");
                         }
                     }
                 }
-                if(targetState == null){
+                if (targetState == null) {
                     throw new Exception("implementation class are not detected.");
                 }
-                else{
+                else {
                     finalType = targetState;
                 }
             }
@@ -53,7 +53,13 @@ namespace Tebot{
                 if(loader == null){
                     loader = StateLoader.Empty();
                 }
-            return new Tebot(bld.Configuration.GetValue<string>("token"), finalType, loader, localApiUrl: localApiUrl, serviceProvider: provider);
+                var tebot = new Tebot(bld.Configuration.GetValue<string>("token"), finalType, loader, localApiUrl: localApiUrl, serviceProvider: provider);
+
+                if (baseSelector != null) {
+                    tebot.SetBaseSelector(baseSelector);
+                }
+
+                return tebot;
             });
 
             return bld;
