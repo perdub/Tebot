@@ -222,7 +222,7 @@ namespace Tebot
                 }
             }
             prefixes.Add(type, prefix);
-            await setMyCommands();
+            setMyCommands();
         }
         private Base CreateInstance(long userId)
         {
