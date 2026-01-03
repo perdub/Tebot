@@ -43,6 +43,9 @@ namespace Tebot
         }
 
         public ReplyParameters GetReplyParams(){
+            if(Update.Message is null){
+                return null;
+            }
             return new ReplyParameters{
                 ChatId = UserId,
                 MessageId = Update.Message.Id
