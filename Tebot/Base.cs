@@ -10,7 +10,7 @@ namespace Tebot
     public abstract class Base
     {
         /// <summary>
-        /// Явлвяется ли чат каналом. Не каналом в привычном понимании, а каналом с точки зрения api(это может быть группа, канал, so on)
+        /// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ. пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ api(пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ, so on)
         /// </summary>
         public bool IsChannel => UserId < 0;
 
@@ -40,6 +40,13 @@ namespace Tebot
             {
                 return Update.Message.Text;
             }
+        }
+
+        public ReplyParameters GetReplyParams(){
+            return new ReplyParameters{
+                ChatId = UserId,
+                MessageId = Update.Message.Id
+            };
         }
 
         private bool _isLoaded = false;
