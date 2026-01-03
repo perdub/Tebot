@@ -284,7 +284,7 @@ namespace Tebot
             }
             if (update.CallbackQuery != null)
             {
-                return update.CallbackQuery.From.Id;
+                return update.CallbackQuery.Message.Chat.Id;
             }
             if (update.InlineQuery != null)
             {
