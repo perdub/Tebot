@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Telegram.Bot;
 
 namespace Tebot{
     public static class TebotHostBuilder{
@@ -12,6 +13,11 @@ namespace Tebot{
 
             bld.Configuration.AddJsonFile(jsonConfigFile, true);
             bld.Configuration.AddEnvironmentVariables();
+
+            bld.Services.AddSingleton<ITelegramBotClient>((prov) =>
+            {
+                return prov.GetRequiredService<Tebot>().Client;
+            });
 
             if (commandLineArgs != null) {
                 bld.Configuration.AddCommandLine(commandLineArgs);
