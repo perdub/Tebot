@@ -14,10 +14,10 @@ namespace Tebot{
             bld.Configuration.AddJsonFile(jsonConfigFile, true);
             bld.Configuration.AddEnvironmentVariables();
 
-            bld.Services.AddSingleton<ITelegramBotClient>((prov) =>
+            /*bld.Services.AddSingleton<ITelegramBotClient>((prov) =>
             {
                 return prov.GetRequiredService<Tebot>().Client;
-            });
+            });//*/
 
             if (commandLineArgs != null) {
                 bld.Configuration.AddCommandLine(commandLineArgs);
