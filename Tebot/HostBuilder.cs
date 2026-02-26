@@ -14,10 +14,10 @@ namespace Tebot{
             bld.Configuration.AddJsonFile(jsonConfigFile, true);
             bld.Configuration.AddEnvironmentVariables();
 
-            /*bld.Services.AddSingleton<ITelegramBotClient>((prov) =>
+            bld.Services.AddSingleton<ITelegramBotClient>((prov) =>
             {
                 return prov.GetRequiredService<Tebot>().Client;
-            });//*/
+            });
 
             if (commandLineArgs != null) {
                 bld.Configuration.AddCommandLine(commandLineArgs);
@@ -50,7 +50,7 @@ namespace Tebot{
                 }
             }
 
-            bld.Services.AddHostedService<Tebot>((provider)=>{
+            bld.Services.AddSingleton<Tebot>((provider)=>{
                 string token = bld.Configuration.GetValue<string>("token") ?? null;
                 if(string.IsNullOrEmpty(token)){
                     throw new Exception("Bot token are not set.");
@@ -67,6 +67,8 @@ namespace Tebot{
 
                 return tebot;
             });
+            bld.Services.AddHostedService(provider =>
+                provider.GetRequiredService<Tebot>());
 
             return bld;
         }
