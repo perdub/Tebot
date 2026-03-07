@@ -72,5 +72,5 @@ namespace Tebot
             throw new Exception($"fall to parse user id. Json represitaion of update: {System.Text.Json.JsonSerializer.Serialize(update)}");
         }
     }
-    }
+    
 }
