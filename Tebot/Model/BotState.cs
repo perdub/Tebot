@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Tebot
+namespace Tebot.Model
 {
-    public interface IBaseSelector
+    public class BotState
     {
-        Type SelectType(long id);
+        public string State { get; set; } = "start";
     }
 }
