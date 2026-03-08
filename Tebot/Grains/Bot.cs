@@ -67,8 +67,8 @@ namespace Tebot.Grains
 
             var persistenceFactory = ServiceProvider.GetRequiredService<IPersistentStateFactory>()!;
             State = persistenceFactory.Create<TState>(GrainContext, new PersistentStateConfigurationImpl(
-                GetStateName(),
-                GetPersistentProvider()));
+                StateName,
+                StorageName));
 
             Logger = ServiceProvider.GetRequiredService<ILogger<TImplementation>>();
 
@@ -114,17 +114,9 @@ namespace Tebot.Grains
             return (false, null);
         }
 
-        
-        protected virtual string GetPersistentProvider()
-        {
-            //todo
-            return "t";
-        }
-        protected virtual string GetStateName()
-        {
-            return "bot-states";
-        }
 
+        public static string StateName { get; set; } = "bot-states";
+        public static string StorageName { get; set; } = typeof(TState).Name;
         private void parceImplementation()
         {
             ImplMap<TImplementation>.ParseType();
