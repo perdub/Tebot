@@ -1,4 +1,5 @@
 ﻿using Orleans;
+using Orleans.Concurrency;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,6 @@ namespace Tebot.Grains
 {
     internal interface IBotGrain : IGrainWithIntegerKey
     {
-        ValueTask SendUpdate(Update update);
+        ValueTask SendUpdate(Immutable<Update> update);
     }
 }

@@ -21,9 +21,16 @@ namespace Tebot
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TState>
             (TebotConfig tebotConfig) 
             where TIntstance : Bot<TIntstance, TState>
-            where TState : BotState
+            where TState : BotState, new()
         {
             var app = Host.CreateApplicationBuilder();
+
+            app.Configuration.AddEnvironmentVariables();
+            app.Configuration.AddCommandLine(tebotConfig.ConsoleArguments);
+            if(tebotConfig.ProcessConfigurationManager is not null)
+            {
+                tebotConfig.ProcessConfigurationManager(app.Configuration);
+            }
 
             app.Services.AddSingleton<ITelegramBotClient>(static (prov) =>
             {

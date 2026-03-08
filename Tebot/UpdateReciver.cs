@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace Tebot
         public Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var grain = grainFactory.GetGrain<IBotGrain>(Helper.GetUpdateId(update));
-            grain.SendUpdate(update);
+            grain.SendUpdate(update.AsImmutable());
 
             return Task.CompletedTask;
         }
@@ -31,6 +32,11 @@ namespace Tebot
         public Task StartAsync(CancellationToken cancellationToken)
         {
             telegramBotClient.StartReceiving(this);
+
+            telegramBotClient.GetMe().ContinueWith(m => {
+                logger.LogInformation($"Bot {telegramBotClient.BotId} is active! - https://t.me/{m.Result.Username}");            
+            });
+
             return Task.CompletedTask;
         }
 

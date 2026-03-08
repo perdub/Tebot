@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Orleans.Concurrency;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -15,7 +16,7 @@ namespace Tebot.Grains
 {
     public abstract partial class Bot<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TImplementation, TState> : Grain, IBotGrain
         where TImplementation : Bot<TImplementation, TState>
-        where TState : BotState
+        where TState : BotState, new()
     {
         protected ITelegramBotClient? BotClient;
         protected IPersistentState<TState>? State;
@@ -26,9 +27,9 @@ namespace Tebot.Grains
 
         protected long ChatId => this.GetPrimaryKeyLong();
         protected string Text => currentUpdate!.Message!.Text ?? currentUpdate.Message.Caption;
-        public async ValueTask SendUpdate(Update update)
+        public async ValueTask SendUpdate(Immutable<Update> update)
         {
-            currentUpdate = update;
+            currentUpdate = update.Value;
 
             //check commands
             var command = isCommand();
@@ -69,6 +70,7 @@ namespace Tebot.Grains
             State = persistenceFactory.Create<TState>(GrainContext, new PersistentStateConfigurationImpl(
                 StateName,
                 StorageName));
+            State.State = new ();
 
             Logger = ServiceProvider.GetRequiredService<ILogger<TImplementation>>();
 
