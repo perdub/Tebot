@@ -164,10 +164,10 @@ namespace Tebot.Grains
             }
         }
 
-        protected abstract Task OnMessageReceived(Message message);
-        protected abstract Task OnUpdateReceived(Update update);
-        protected abstract Task OnInlineQueryRequest(InlineQuery inlineQuery);
-        protected abstract Task OnInlineChosenResult(ChosenInlineResult result);
+        protected virtual Task OnMessageReceived(Message message) { return Task.CompletedTask; }
+        protected virtual Task OnUpdateReceived(Update update) { return Task.CompletedTask; }
+        protected virtual Task OnInlineQueryRequest(InlineQuery inlineQuery) { return Task.CompletedTask; }
+        protected virtual Task OnInlineChosenResult(ChosenInlineResult result) { return Task.CompletedTask; }
 
         public static string StateName { get; set; } = "bot-states";
         public static string StorageName { get; set; } = typeof(TState).Name;
