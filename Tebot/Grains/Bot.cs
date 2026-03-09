@@ -18,8 +18,25 @@ namespace Tebot.Grains
         where TImplementation : Bot<TImplementation, TState>
         where TState : BotState, new()
     {
-        protected ITelegramBotClient? BotClient;
-        protected IPersistentState<TState>? State;
+        protected ITelegramBotClient BotClient;
+        protected internal IPersistentState<TState>? State;
+        protected TState Data => State?.State!;
+
+        protected Task SaveAsync()
+        {
+            if (State != null)
+            {
+                return State.WriteStateAsync();
+            }
+            return Task.CompletedTask;
+        }
+        protected Task ClearStateAsync()
+        {
+            if (State != null) {
+                return State.ClearStateAsync();
+            }
+            return Task.CompletedTask;
+        }
 
         protected ILogger<TImplementation>? Logger;
 
@@ -30,6 +47,8 @@ namespace Tebot.Grains
         public async ValueTask SendUpdate(Immutable<Update> update)
         {
             currentUpdate = update.Value;
+
+            await invokeCallbacks(currentUpdate);
 
             //check commands
             var command = isCommand();
@@ -61,7 +80,7 @@ namespace Tebot.Grains
             await getTask(stateExecutionResult);
         }
 
-        public override Task OnActivateAsync(CancellationToken cancellationToken)
+        public override async Task OnActivateAsync(CancellationToken cancellationToken)
         {
             parceImplementation();
             BotClient = ServiceProvider.GetRequiredService<ITelegramBotClient>();
@@ -70,11 +89,18 @@ namespace Tebot.Grains
             State = persistenceFactory.Create<TState>(GrainContext, new PersistentStateConfigurationImpl(
                 StateName,
                 StorageName));
-            State.State = new ();
+
+            await State.ReadStateAsync(cancellationToken);
+
+            if(State.State is null)
+            {
+                State.State = new TState();
+            }
 
             Logger = ServiceProvider.GetRequiredService<ILogger<TImplementation>>();
 
-            return base.OnActivateAsync(cancellationToken);
+            await base.OnActivateAsync(cancellationToken);
+            return;
         }
 
 
@@ -107,7 +133,9 @@ namespace Tebot.Grains
 
                     if (text.StartsWith('/'))
                     {
-                        text = text.Substring(0, text.IndexOf('@'));
+                        var idIndex = text.IndexOf('@');
+                        if(idIndex != -1)
+                            text = text.Substring(0, text.IndexOf('@'));
                         return (true, text);
                     }
                 }
@@ -116,6 +144,30 @@ namespace Tebot.Grains
             return (false, null);
         }
 
+
+        private async Task invokeCallbacks(Update update)
+        {
+            await OnUpdateReceived(update);
+
+            if (update.Message is not null)
+            {
+                await OnMessageReceived(update.Message);
+            }
+
+            if(update.InlineQuery is not null)
+            {
+                await OnInlineQueryRequest(update.InlineQuery);
+            }
+
+            if (update.ChosenInlineResult is not null) {
+                await OnInlineChosenResult(update.ChosenInlineResult);
+            }
+        }
+
+        protected abstract Task OnMessageReceived(Message message);
+        protected abstract Task OnUpdateReceived(Update update);
+        protected abstract Task OnInlineQueryRequest(InlineQuery inlineQuery);
+        protected abstract Task OnInlineChosenResult(ChosenInlineResult result);
 
         public static string StateName { get; set; } = "bot-states";
         public static string StorageName { get; set; } = typeof(TState).Name;

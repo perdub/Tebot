@@ -28,6 +28,15 @@ public class MyBot : Bot<MyBot, MyBotState>
     [State("start")]
     public async Task Start()
     {
-        await BotClient.SendMessage(ChatId, "pong");        
+        Data.Be++;
+        await BotClient.SendMessage(ChatId, $"pong{Data.Be}");
+        await SaveAsync();
+    }
+
+    [Command("/mul10", "Умножить на 10")]
+    public async Task Mul()
+    {
+        Data.Be *= 10;
+        await SaveAsync();
     }
 }

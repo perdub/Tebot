@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Tebot.Attributes
 {
     [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public abstract class CommandAttribute : ValueAttribute
+    public sealed class CommandAttribute : ValueAttribute
     {
         public string CommandDescription { get; private set; }
 
