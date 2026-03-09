@@ -9,7 +9,7 @@ namespace Tebot.Attributes
     [System.AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public sealed class CommandAttribute : ValueAttribute
     {
-        public string CommandDescription { get; private set; }
+        public string? CommandDescription { get; private set; } = null;
 
         public bool IsPrivateCommand => string.IsNullOrWhiteSpace(CommandDescription);
         public CommandAttribute(string state, string description) : base(state)

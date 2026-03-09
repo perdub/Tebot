@@ -2,6 +2,8 @@
 using System.Reflection;
 using Tebot.Attributes;
 using Tebot.Grains;
+using Telegram.Bot;
+using Telegram.Bot.Types;
 
 namespace Tebot.Model
 {
@@ -10,12 +12,12 @@ namespace Tebot.Model
         static internal Dictionary<string, MethodInfo> States { get; set; } = new Dictionary<string, MethodInfo>();
         static internal Dictionary<string, MethodInfo> Commands { get; set; } = new Dictionary<string, MethodInfo>();
 
-        static internal Dictionary<string, string> CommandDescriptions { get; set; } = new Dictionary<string, string>();
+        static internal Dictionary<string, string?> CommandDescriptions { get; set; } = new Dictionary<string, string?>();
 
         static internal bool IsParsed = false;
         static readonly object _lock = new object();
 
-        internal static void ParseType()
+        internal static void ParseType(ITelegramBotClient botClient)
         {
             if (ImplMap<TImplementation>.IsParsed)
             {
@@ -49,6 +51,9 @@ namespace Tebot.Model
                     CommandDescriptions[s.attribute.Value] = s.attribute.CommandDescription;
                 }
 
+                //not sure if this should be there
+                var botCommands = CommandDescriptions.Where(a => a.Value is not null).Select(b => new BotCommand(b.Key, b.Value));
+                botClient.SetMyCommands(botCommands);
 
                 ImplMap<TImplementation>.IsParsed = true;
             }

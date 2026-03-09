@@ -21,6 +21,15 @@ namespace Tebot.Grains
         protected ITelegramBotClient BotClient;
         protected internal IPersistentState<TState>? State;
         protected TState Data => State?.State!;
+        
+        protected async Task GoToState(string state, bool perfomSaving = true)
+        {
+            State!.State.State = state;
+            if (perfomSaving)
+            {
+                await SaveAsync();
+            }
+        }
 
         protected Task SaveAsync()
         {
@@ -82,13 +91,13 @@ namespace Tebot.Grains
 
         public override async Task OnActivateAsync(CancellationToken cancellationToken)
         {
-            parceImplementation();
             BotClient = ServiceProvider.GetRequiredService<ITelegramBotClient>();
+            parceImplementation();
 
             var persistenceFactory = ServiceProvider.GetRequiredService<IPersistentStateFactory>()!;
             State = persistenceFactory.Create<TState>(GrainContext, new PersistentStateConfigurationImpl(
-                StateName,
-                StorageName));
+                DbStateName,
+                DbStorageName));
 
             await State.ReadStateAsync(cancellationToken);
 
@@ -169,11 +178,11 @@ namespace Tebot.Grains
         protected virtual Task OnInlineQueryRequest(InlineQuery inlineQuery) { return Task.CompletedTask; }
         protected virtual Task OnInlineChosenResult(ChosenInlineResult result) { return Task.CompletedTask; }
 
-        public static string StateName { get; set; } = "bot-states";
-        public static string StorageName { get; set; } = typeof(TState).Name;
+        public static string DbStateName { get; set; } = "bot-states";
+        public static string DbStorageName { get; set; } = typeof(TState).Name;
         private void parceImplementation()
         {
-            ImplMap<TImplementation>.ParseType();
+            ImplMap<TImplementation>.ParseType(BotClient);
         }
     }
 }

@@ -44,8 +44,8 @@ namespace Tebot
                 return b;
             });
 
-            Bot<TIntstance, TState>.StateName = tebotConfig.StateName;
-            Bot<TIntstance, TState>.StorageName = tebotConfig.StorageName;
+            Bot<TIntstance, TState>.DbStateName = tebotConfig.StateName;
+            Bot<TIntstance, TState>.DbStorageName = tebotConfig.StorageName;
 
             app.UseOrleans((builder) => {
                 {
