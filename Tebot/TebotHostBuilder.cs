@@ -14,8 +14,32 @@ using Telegram.Bot;
 
 namespace Tebot
 {
+    /// <summary>
+    /// Builder class for configuring and creating a Tebot application with Orleans and Telegram Bot integration.
+    /// </summary>
     public class TebotHostBuilder
     {
+        /// <summary>
+        /// Builds and configures a host application for a Telegram bot with Orleans grain storage.
+        /// </summary>
+        /// <typeparam name="TIntstance">The bot implementation type that inherits from <see cref="Bot{TImplementation, TState}"/>.</typeparam>
+        /// <typeparam name="TState">The state type that inherits from <see cref="BotState"/>.</typeparam>
+        /// <param name="tebotConfig">Configuration options for the bot.</param>
+        /// <returns>A configured <see cref="HostApplicationBuilder"/> ready to build and run.</returns>
+        /// <example>
+        /// <code>
+        /// var app = TebotHostBuilder.Build&lt;MyBot, MyBotState&gt;(new TebotConfig
+        /// {
+        ///     ConsoleArguments = args,
+        ///     StorageName = "my-bot-storage",
+        ///     StateName = "my-bot-state",
+        ///     ProcessConfigurationManager = (manager) => {
+        ///         manager.AddJsonFile("config.json");
+        ///     }
+        /// });
+        /// app.Build().Run();
+        /// </code>
+        /// </example>
         public static HostApplicationBuilder Build
             <[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TIntstance,
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TState>

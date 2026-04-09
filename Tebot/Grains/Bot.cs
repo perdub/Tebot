@@ -14,14 +14,37 @@ using Telegram.Bot.Types;
 
 namespace Tebot.Grains
 {
+    /// <summary>
+    /// Base class for implementing a Telegram bot with state machine pattern using Orleans grains.
+    /// Each user interaction is handled by a separate grain instance with persistent state.
+    /// </summary>
+    /// <typeparam name="TImplementation">The concrete bot implementation type.</typeparam>
+    /// <typeparam name="TState">The state type that inherits from <see cref="BotState"/>.</typeparam>
     public abstract partial class Bot<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] TImplementation, TState> : Grain, IBotGrain
         where TImplementation : Bot<TImplementation, TState>
         where TState : BotState, new()
     {
+        /// <summary>
+        /// Gets the Telegram Bot API client for sending messages and interacting with Telegram.
+        /// </summary>
         protected ITelegramBotClient BotClient;
+        
+        /// <summary>
+        /// Gets the persistent state storage for this grain.
+        /// </summary>
         protected internal IPersistentState<TState>? State;
+        
+        /// <summary>
+        /// Gets the current user's state data.
+        /// </summary>
         protected TState Data => State?.State!;
         
+        /// <summary>
+        /// Transitions the bot to a new state.
+        /// </summary>
+        /// <param name="state">The name of the target state.</param>
+        /// <param name="perfomSaving">If true, automatically saves the state after transition. Default is true.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         protected async Task GoToState(string state, bool perfomSaving = true)
         {
             State!.State.State = state;
@@ -31,6 +54,10 @@ namespace Tebot.Grains
             }
         }
 
+        /// <summary>
+        /// Saves the current state to persistent storage.
+        /// </summary>
+        /// <returns>A task representing the asynchronous save operation.</returns>
         protected Task SaveAsync()
         {
             if (State != null)
@@ -39,6 +66,11 @@ namespace Tebot.Grains
             }
             return Task.CompletedTask;
         }
+        
+        /// <summary>
+        /// Clears the current state from persistent storage.
+        /// </summary>
+        /// <returns>A task representing the asynchronous clear operation.</returns>
         protected Task ClearStateAsync()
         {
             if (State != null) {
@@ -47,11 +79,24 @@ namespace Tebot.Grains
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Gets the logger instance for this bot.
+        /// </summary>
         protected ILogger<TImplementation>? Logger;
 
+        /// <summary>
+        /// Gets the current Telegram update being processed.
+        /// </summary>
         protected Update? currentUpdate;
 
+        /// <summary>
+        /// Gets the chat ID for the current user interaction.
+        /// </summary>
         protected long ChatId => this.GetPrimaryKeyLong();
+        
+        /// <summary>
+        /// Gets the text content from the current message (either Text or Caption).
+        /// </summary>
         protected string Text => currentUpdate!.Message!.Text ?? currentUpdate.Message.Caption;
         public async ValueTask SendUpdate(Immutable<Update> update)
         {
@@ -173,12 +218,42 @@ namespace Tebot.Grains
             }
         }
 
+        /// <summary>
+        /// Called when a message is received. Override this method to handle all incoming messages.
+        /// </summary>
+        /// <param name="message">The received message.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         protected virtual Task OnMessageReceived(Message message) { return Task.CompletedTask; }
+        
+        /// <summary>
+        /// Called when any update is received. Override this method to handle all types of updates.
+        /// </summary>
+        /// <param name="update">The received update.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         protected virtual Task OnUpdateReceived(Update update) { return Task.CompletedTask; }
+        
+        /// <summary>
+        /// Called when an inline query is received. Override this method to handle inline queries.
+        /// </summary>
+        /// <param name="inlineQuery">The received inline query.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         protected virtual Task OnInlineQueryRequest(InlineQuery inlineQuery) { return Task.CompletedTask; }
+        
+        /// <summary>
+        /// Called when a user selects an inline query result. Override this method to handle chosen inline results.
+        /// </summary>
+        /// <param name="result">The chosen inline result.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         protected virtual Task OnInlineChosenResult(ChosenInlineResult result) { return Task.CompletedTask; }
 
+        /// <summary>
+        /// Gets or sets the database state name used for persistence.
+        /// </summary>
         public static string DbStateName { get; set; } = "bot-states";
+        
+        /// <summary>
+        /// Gets or sets the database storage name used for persistence.
+        /// </summary>
         public static string DbStorageName { get; set; } = typeof(TState).Name;
         private void parceImplementation()
         {
