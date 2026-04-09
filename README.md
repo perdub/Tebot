@@ -2,8 +2,14 @@
 
 [![NuGet Version](https://img.shields.io/nuget/v/Tebot?color=blue)](https://www.nuget.org/packages/Tebot/)
 
-
 This is a small wrapper library for Telegram.Bot. With it, you can simplify the creation of complex bot logic. In `TebotConsole` you can find a example small console app.
+
+## Documentation
+
+- **[Full Documentation](docs/DOCUMENTATION.md)** - Complete API reference, examples, and best practices
+- **[AGENTS.md](docs/AGENTS.md)** - Quick reference for AI assistants and developers
+
+> **For AI Assistants**: Read `docs/DOCUMENTATION.md` for complete API documentation before working with this library.
 
 ## Why?   
 When you try to make telegram bot on Telegram.Bot, you usually have one big method like `OnUpdate(Update update, ...)` which process every update. And in this method you usually have a lot of if/else, switch and other shit. With this, you method easy can grow up to many lines of code.\n\n
